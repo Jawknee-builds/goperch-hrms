@@ -208,28 +208,60 @@ export default function DashboardClient({ user }: { user: User }) {
       ]);
 
       if (deptRes.ok) {
-        const deptList = (await deptRes.json()).departments;
-        setDepartments(deptList);
-        if (deptList.length > 0 && Object.keys(expandedDepts).length === 0) {
-          setExpandedDepts({ [deptList[0].id]: true });
+        const deptList: Department[] = (await deptRes.json()).departments;
+        const sortedDeptList = [...deptList].sort((a, b) => {
+          const aMatch = (user.departmentId && a.id === user.departmentId) || (user.department?.name && a.name.toLowerCase() === user.department.name.toLowerCase());
+          const bMatch = (user.departmentId && b.id === user.departmentId) || (user.department?.name && b.name.toLowerCase() === user.department.name.toLowerCase());
+          if (aMatch && !bMatch) return -1;
+          if (!aMatch && bMatch) return 1;
+          return 0;
+        });
+        setDepartments(sortedDeptList);
+        if (sortedDeptList.length > 0 && Object.keys(expandedDepts).length === 0) {
+          const userDeptObj = sortedDeptList.find((d) => (user.departmentId && d.id === user.departmentId) || (user.department?.name && d.name.toLowerCase() === user.department.name.toLowerCase())) || sortedDeptList[0];
+          setExpandedDepts({ [userDeptObj.id]: true });
         }
       }
       if (msRes.ok) setMilestones((await msRes.json()).milestones);
       if (projRes.ok) {
-        const projList = (await projRes.json()).projects;
-        setProjects(projList);
-        if (projList.length > 0 && Object.keys(expandedProjects).length === 0) {
-          setExpandedProjects({ [projList[0].id]: true });
+        const projList: Project[] = (await projRes.json()).projects;
+        const sortedProjList = [...projList].sort((a, b) => {
+          const aMatch = (user.departmentId && a.department?.id === user.departmentId) || (user.department?.name && a.department?.name?.toLowerCase() === user.department.name.toLowerCase());
+          const bMatch = (user.departmentId && b.department?.id === user.departmentId) || (user.department?.name && b.department?.name?.toLowerCase() === user.department.name.toLowerCase());
+          if (aMatch && !bMatch) return -1;
+          if (!aMatch && bMatch) return 1;
+          return 0;
+        });
+        setProjects(sortedProjList);
+        if (sortedProjList.length > 0 && Object.keys(expandedProjects).length === 0) {
+          setExpandedProjects({ [sortedProjList[0].id]: true });
         }
       }
-      if (taskRes.ok) setTasks((await taskRes.json()).tasks);
+      if (taskRes.ok) {
+        const rawTasks: Task[] = (await taskRes.json()).tasks;
+        const sortedTasks = [...rawTasks].sort((a, b) => {
+          const aMatch = user.department?.name && a.department?.name?.toLowerCase() === user.department.name.toLowerCase();
+          const bMatch = user.department?.name && b.department?.name?.toLowerCase() === user.department.name.toLowerCase();
+          if (aMatch && !bMatch) return -1;
+          if (!aMatch && bMatch) return 1;
+          return 0;
+        });
+        setTasks(sortedTasks);
+      }
       if (skillRes.ok) setUserSkills((await skillRes.json()).userSkills);
       if (hurdleRes.ok) setHurdles((await hurdleRes.json()).hurdles);
       if (chRes.ok) {
-        const chList = (await chRes.json()).channels;
-        setChannels(chList);
-        if (chList.length > 0 && !selectedChannelId && !selectedDmUser) {
-          setSelectedChannelId(chList[0].id);
+        const chList: Channel[] = (await chRes.json()).channels;
+        const sortedChList = [...chList].sort((a, b) => {
+          const aMatch = user.department?.name && a.department?.name?.toLowerCase() === user.department.name.toLowerCase();
+          const bMatch = user.department?.name && b.department?.name?.toLowerCase() === user.department.name.toLowerCase();
+          if (aMatch && !bMatch) return -1;
+          if (!aMatch && bMatch) return 1;
+          return 0;
+        });
+        setChannels(sortedChList);
+        if (sortedChList.length > 0 && !selectedChannelId && !selectedDmUser) {
+          setSelectedChannelId(sortedChList[0].id);
         }
       }
       if (empRes.ok) {
@@ -637,29 +669,46 @@ export default function DashboardClient({ user }: { user: User }) {
       {/* Clean Minimalist Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
         <div>
-          <div className="text-xs font-semibold text-blue-600 mb-1">GoPerch Workspace</div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-semibold text-blue-600">GoPerch Workspace</span>
+            {user.department && (
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-100/80 text-blue-800 text-[10px] font-bold border border-blue-200 shadow-2xs flex items-center gap-1">
+                🎯 {user.department.name} Department Hub
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
             Hello, {user.name.split(" ")[0]} 👋
+            {user.role === "HOD" && (
+              <span className="text-xs font-bold px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full border border-amber-300 shadow-2xs">
+                👑 Head of {user.department?.name || "Department"}
+              </span>
+            )}
           </h1>
-          <p className="text-xs text-slate-500 font-medium">
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
             {user.role === "CEO" && "Executive overview across Electronics, Software, Sales, and Leadership."}
-            {user.role === "HOD" && `Department Portal for ${user.department?.name}.`}
-            {user.role === "EMPLOYEE" && "Your personal team workspace."}
+            {user.role === "HOD" && `Welcome to your ${user.department?.name || "Department"} Command Center. Operations & team priorities ranked on top.`}
+            {user.role === "EMPLOYEE" && `Your personal ${user.department?.name || "team"} workspace.`}
           </p>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
-          {user.role === "CEO" && (
+          {(user.role === "CEO" || user.role === "HOD") && (
             <select
               value={selectedDeptFilter}
               onChange={(e) => setSelectedDeptFilter(e.target.value)}
-              className="bg-white border border-slate-200 text-slate-800 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-600 shadow-sm"
+              className="bg-white border border-blue-200 text-slate-800 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-600 shadow-sm"
             >
-              <option value="ALL">All Departments</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
+              <option value="ALL">All Departments View</option>
+              {departments.map((d) => {
+                const isUserDept = d.id === user.departmentId || d.name.toLowerCase() === user.department?.name?.toLowerCase();
+                return (
+                  <option key={d.id} value={d.id}>
+                    {isUserDept ? `⭐ ${d.name} (My Department)` : d.name}
+                  </option>
+                );
+              })}
             </select>
           )}
 
@@ -905,8 +954,13 @@ export default function DashboardClient({ user }: { user: User }) {
                           {dept.code.charAt(0)}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-base font-bold text-slate-900">{dept.name} Department</h3>
+                            {(dept.id === user.departmentId || dept.name.toLowerCase() === user.department?.name?.toLowerCase()) && (
+                              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-blue-600 text-white shadow-2xs flex items-center gap-1">
+                                ⭐ Your Department
+                              </span>
+                            )}
                             {deptHurdlesCount > 0 && (
                               <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                                 {deptHurdlesCount} Blocker
