@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     const token = await signToken({
       userId: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role as "CEO" | "HOD" | "EMPLOYEE",
       departmentId: user.departmentId,
     });
 

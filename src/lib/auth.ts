@@ -59,7 +59,10 @@ export async function getCurrentUser() {
 
     // Omit password hash
     const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return {
+      ...userWithoutPassword,
+      role: userWithoutPassword.role as "CEO" | "HOD" | "EMPLOYEE",
+    };
   } catch (err: any) {
     if (err && typeof err === "object" && err.digest === "DYNAMIC_SERVER_USAGE") {
       throw err;

@@ -1,49 +1,10 @@
 // Prisma schema for GoPerch HRMS
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-}
-
-enum Role {
-  CEO
-  HOD
-  EMPLOYEE
-}
-
-enum TaskStatus {
-  TODO
-  IN_PROGRESS
-  IN_REVIEW
-  COMPLETED
-}
-
-enum TaskPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-enum MilestoneStatus {
-  PLANNED
-  IN_PROGRESS
-  COMPLETED
-}
-
-enum ProficiencyLevel {
-  LEARNING
-  INTERMEDIATE
-  ADVANCED
-  MASTERED
-}
-
-enum HurdleStatus {
-  OPEN
-  RESOLVED
+  provider = "sqlite"
 }
 
 model Department {
@@ -66,7 +27,7 @@ model User {
   email           String      @unique
   password        String
   name            String
-  role            Role        @default(EMPLOYEE)
+  role            String      @default("EMPLOYEE") // CEO, HOD, EMPLOYEE
   title           String?
   departmentId    String?
   department      Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
@@ -90,18 +51,18 @@ model User {
 }
 
 model Milestone {
-  id           String          @id @default(uuid())
+  id           String     @id @default(uuid())
   title        String
   description  String?
   targetDate   DateTime
-  status       MilestoneStatus @default(IN_PROGRESS)
+  status       String     @default("IN_PROGRESS") // PLANNED, IN_PROGRESS, COMPLETED
   departmentId String
-  department   Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 
   tasks        Task[]
 
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model Project {
@@ -137,32 +98,32 @@ model ProjectNote {
 }
 
 model Task {
-  id           String       @id @default(uuid())
+  id           String     @id @default(uuid())
   title        String
   description  String?
-  status       TaskStatus   @default(TODO)
-  priority     TaskPriority @default(MEDIUM)
+  status       String     @default("TODO") // TODO, IN_PROGRESS, IN_REVIEW, COMPLETED
+  priority     String     @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
   dueDate      DateTime?
 
   departmentId String
-  department   Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 
   createdById  String
-  createdBy    User         @relation("CreatedTasks", fields: [createdById], references: [id])
+  createdBy    User       @relation("CreatedTasks", fields: [createdById], references: [id])
 
   assignedToId String?
-  assignedTo   User?        @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  assignedTo   User?      @relation("AssignedTasks", fields: [assignedToId], references: [id])
 
   milestoneId  String?
-  milestone    Milestone?   @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  milestone    Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
 
   projectId    String?
-  project      Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project      Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   hurdles      Hurdle[]
 
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model Skill {
@@ -176,40 +137,40 @@ model Skill {
 }
 
 model UserSkill {
-  id          String           @id @default(uuid())
+  id          String   @id @default(uuid())
   userId      String
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   skillId     String
-  skill       Skill            @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
-  proficiency ProficiencyLevel @default(LEARNING)
+  proficiency String   @default("LEARNING") // LEARNING, INTERMEDIATE, ADVANCED, MASTERED
   notes       String?
 
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([userId, skillId])
 }
 
 model Hurdle {
-  id           String       @id @default(uuid())
+  id           String   @id @default(uuid())
   title        String
   question     String
   answer       String?
-  status       HurdleStatus @default(OPEN)
+  status       String   @default("OPEN") // OPEN, RESOLVED
 
   taskId       String?
-  task         Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  task         Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   askedById    String
-  askedBy      User         @relation("AskedHurdles", fields: [askedById], references: [id])
+  askedBy      User     @relation("AskedHurdles", fields: [askedById], references: [id])
 
   answeredById String?
-  answeredBy   User?        @relation("AnsweredHurdles", fields: [answeredById], references: [id])
+  answeredBy   User?    @relation("AnsweredHurdles", fields: [answeredById], references: [id])
 
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Channel {
