@@ -565,7 +565,11 @@ export default function DashboardClient({ user }: { user: User }) {
   const allUsersList = departments.flatMap((d) => d.users).filter((u) => !u.isArchived);
 
   const filteredTasks = tasks.filter((t) => {
-    if (selectedDeptFilter !== "ALL" && t.department?.name !== departments.find((d) => d.id === selectedDeptFilter)?.name) {
+    if (user.role === "EMPLOYEE") {
+      const isDeptMatch = t.department?.name?.toLowerCase() === user.department?.name?.toLowerCase();
+      const isAssignedToMe = t.assignedTo?.id === user.id;
+      if (!isDeptMatch && !isAssignedToMe) return false;
+    } else if (selectedDeptFilter !== "ALL" && t.department?.name !== departments.find((d) => d.id === selectedDeptFilter)?.name) {
       return false;
     }
     if (selectedStatusFilter !== "ALL" && t.status !== selectedStatusFilter) {
@@ -932,7 +936,12 @@ export default function DashboardClient({ user }: { user: User }) {
         <div className="space-y-4">
           <div className="space-y-3">
             {departments
-              .filter((d) => selectedDeptFilter === "ALL" || d.id === selectedDeptFilter)
+              .filter((d) => {
+                if (user.role === "EMPLOYEE") {
+                  return d.id === user.departmentId || d.name.toLowerCase() === user.department?.name?.toLowerCase();
+                }
+                return selectedDeptFilter === "ALL" || d.id === selectedDeptFilter;
+              })
               .map((dept) => {
                 const isExpanded = !!expandedDepts[dept.id];
                 const deptTasks = tasks.filter((t) => t.department?.name === dept.name);
@@ -1065,7 +1074,12 @@ export default function DashboardClient({ user }: { user: User }) {
 
           <div className="space-y-3">
             {projects
-              .filter((p) => selectedDeptFilter === "ALL" || p.department?.id === selectedDeptFilter)
+              .filter((p) => {
+                if (user.role === "EMPLOYEE") {
+                  return !p.department || p.department?.id === user.departmentId || p.department?.name?.toLowerCase() === user.department?.name?.toLowerCase();
+                }
+                return selectedDeptFilter === "ALL" || p.department?.id === selectedDeptFilter;
+              })
               .map((proj) => {
                 const isExpanded = !!expandedProjects[proj.id];
                 const projTasks = proj.tasks || [];
@@ -1227,7 +1241,14 @@ export default function DashboardClient({ user }: { user: User }) {
               <button onClick={() => setIsChannelModalOpen(true)} className="text-blue-600 hover:underline">+</button>
             </div>
             <div className="space-y-1">
-              {channels.map((ch) => (
+              {channels
+                .filter((ch) => {
+                  if (user.role === "EMPLOYEE") {
+                    return !ch.department || ch.department?.name?.toLowerCase() === user.department?.name?.toLowerCase() || ch.name.toLowerCase() === "general";
+                  }
+                  return true;
+                })
+                .map((ch) => (
                 <button
                   key={ch.id}
                   onClick={() => { setSelectedChannelId(ch.id); setSelectedDmUser(null); }}
@@ -1314,7 +1335,15 @@ export default function DashboardClient({ user }: { user: User }) {
 
           {!showArchivedRoster ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {allUsersList.map((emp) => (
+              {allUsersList
+                .filter((emp) => {
+                  if (user.role === "EMPLOYEE") {
+                    const empDept = departments.find((d) => d.users.some((u) => u.id === emp.id));
+                    return empDept?.id === user.departmentId || empDept?.name.toLowerCase() === user.department?.name?.toLowerCase();
+                  }
+                  return true;
+                })
+                .map((emp) => (
                 <div
                   key={emp.id}
                   className="goperch-card p-4 hover:border-blue-500 transition flex items-center justify-between"
