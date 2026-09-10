@@ -40,14 +40,13 @@ export default function LoginPage() {
   };
 
   const demoAccounts = [
-    { label: "CEO (Master Control)", email: "ceo@goperch.com", role: "CEO", dept: "Leadership" },
-    { label: "Software HOD", email: "hod.software@goperch.com", role: "HOD", dept: "Software" },
-    { label: "Electronics HOD", email: "hod.electronics@goperch.com", role: "HOD", dept: "Electronics" },
-    { label: "Sales HOD", email: "hod.sales@goperch.com", role: "HOD", dept: "Sales" },
-    { label: "Leadership HOD", email: "hod.leadership@goperch.com", role: "HOD", dept: "Leadership" },
-    { label: "Software Employee", email: "emp.software@goperch.com", role: "EMPLOYEE", dept: "Software" },
-    { label: "Electronics Employee", email: "emp.electronics@goperch.com", role: "EMPLOYEE", dept: "Electronics" },
-    { label: "Sales Employee", email: "emp.sales@goperch.com", role: "EMPLOYEE", dept: "Sales" },
+    { label: "Ryan Bantu (CEO)", email: "ceo@goperch.com", role: "CEO", dept: "Leadership" },
+    { label: "Prasanna (Software HOD)", email: "hod.software@goperch.com", role: "HOD", dept: "Software" },
+    { label: "Vikram (Electronics HOD)", email: "hod.electronics@goperch.com", role: "HOD", dept: "Electronics" },
+    { label: "Jonathan Jaladi (Sales HOD)", email: "hod.sales@goperch.com", role: "HOD", dept: "Sales" },
+    { label: "Alex Dev (Software Dev)", email: "emp.software@goperch.com", role: "EMPLOYEE", dept: "Software" },
+    { label: "Priya Patel (Hardware Eng)", email: "emp.electronics@goperch.com", role: "EMPLOYEE", dept: "Electronics" },
+    { label: "James Wilson (Sales Rep)", email: "emp.sales@goperch.com", role: "EMPLOYEE", dept: "Sales" },
   ];
 
   return (
