@@ -103,6 +103,20 @@ export async function DELETE(
       return NextResponse.json({ error: "Employee not found" }, { status: 404 });
     }
 
+    const CORE_TEAM_EMAILS = [
+      "ceo@goperch.com",
+      "hod.sales@goperch.com",
+      "hod.electronics@goperch.com",
+      "hod.software@goperch.com",
+    ];
+
+    if (CORE_TEAM_EMAILS.includes(targetUser.email.toLowerCase())) {
+      return NextResponse.json(
+        { error: "Forbidden: Core leadership team members (Ryan Bantu, Jonathan Jaladi, Vikram, Prasanna) are protected and cannot be deleted." },
+        { status: 400 }
+      );
+    }
+
     // Soft delete / archive to ensure complete data backup recovery
     const archivedUser = await db.user.update({
       where: { id },

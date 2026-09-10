@@ -323,7 +323,20 @@ export default function DashboardClient({ user }: { user: User }) {
     }
   };
 
+  const CORE_TEAM_EMAILS = [
+    "ceo@goperch.com",
+    "hod.sales@goperch.com",
+    "hod.electronics@goperch.com",
+    "hod.software@goperch.com",
+  ];
+
   const handleDeleteEmployee = async (empId: string) => {
+    const targetEmp = allUsersList.find((u) => u.id === empId) || (employeeProfile?.id === empId ? employeeProfile : null);
+    if (targetEmp && CORE_TEAM_EMAILS.includes(targetEmp.email.toLowerCase())) {
+      alert("Forbidden: Core leadership team members (Ryan Bantu, Jonathan Jaladi, Vikram, Prasanna) are protected and cannot be deleted.");
+      return;
+    }
+
     if (!confirm("Are you sure you want to delete/archive this employee? All data will be backed up safely and can be restored.")) {
       return;
     }
@@ -1262,16 +1275,22 @@ export default function DashboardClient({ user }: { user: User }) {
 
                   <div className="flex items-center gap-2">
                     {user.role !== "EMPLOYEE" && emp.id !== user.id && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteEmployee(emp.id);
-                        }}
-                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition"
-                        title="Delete / Archive Employee with Backup Protection"
-                      >
-                        🗑️
-                      </button>
+                      CORE_TEAM_EMAILS.includes(emp.email.toLowerCase()) ? (
+                        <span className="px-2.5 py-1 text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 rounded-lg flex items-center gap-1" title="Core Leadership Member (Protected)">
+                          🛡️ Core Leader
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteEmployee(emp.id);
+                          }}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition"
+                          title="Delete / Archive Employee with Backup Protection"
+                        >
+                          🗑️
+                        </button>
+                      )
                     )}
                     <button onClick={() => openEmployeeProfile(emp.id)} className="text-xs text-blue-600 font-bold">&rarr;</button>
                   </div>
@@ -1412,12 +1431,18 @@ export default function DashboardClient({ user }: { user: User }) {
                     </button>
 
                     {employeeProfile.id !== user.id && (
-                      <button
-                        onClick={() => handleDeleteEmployee(employeeProfile.id)}
-                        className="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl text-xs border border-rose-200 transition"
-                      >
-                        🗑️ Delete / Archive Employee to Backup Roster
-                      </button>
+                      CORE_TEAM_EMAILS.includes(employeeProfile.email.toLowerCase()) ? (
+                        <div className="w-full py-2 bg-blue-50 text-blue-800 font-bold rounded-xl text-xs border border-blue-200 text-center flex items-center justify-center gap-1.5">
+                          🛡️ Core Leadership Member (Undeletable Account)
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleDeleteEmployee(employeeProfile.id)}
+                          className="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl text-xs border border-rose-200 transition"
+                        >
+                          🗑️ Delete / Archive Employee to Backup Roster
+                        </button>
+                      )
                     )}
                   </div>
                 )}
