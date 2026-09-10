@@ -199,7 +199,7 @@ export default function DashboardClient({ user }: { user: User }) {
       const [deptRes, msRes, projRes, taskRes, skillRes, hurdleRes, chRes, empRes] = await Promise.all([
         fetch("/api/departments"),
         fetch("/api/milestones"),
-        fetch(`/api/projects${selectedDeptFilter !== "ALL" ? `?departmentId=${selectedDeptFilter}` : ""}`),
+        fetch("/api/projects"),
         fetch(`/api/tasks${selectedDeptFilter !== "ALL" ? `?departmentId=${selectedDeptFilter}` : ""}`),
         fetch("/api/skills"),
         fetch("/api/hurdles"),
@@ -439,6 +439,17 @@ export default function DashboardClient({ user }: { user: User }) {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (newProject.isTopFocus) {
+      const currentTopProjects = projects.filter((p) => p.isTopFocus);
+      if (currentTopProjects.length >= 3) {
+        const projToDemote = currentTopProjects[currentTopProjects.length - 1];
+        await fetch("/api/projects", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: projToDemote.id, isTopFocus: false }),
+        });
+      }
+    }
     try {
       const res = await fetch("/api/projects", {
         method: "POST",
@@ -743,34 +754,60 @@ export default function DashboardClient({ user }: { user: User }) {
         </div>
       </div>
 
-      {/* CEO TOP 3 STRATEGIC FOCUS INTERACTIVE DRAG-&-DROP / PULL TRAY */}
+      {/* CEO TOP 3 STRATEGIC FOCUS INTERACTIVE TRAY (VISIBLE TO ALL ROLES) */}
       <div
         onDragOver={(e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "move";
+          if (user.role === "CEO") {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          }
         }}
         onDrop={(e) => {
-          e.preventDefault();
-          const projId = e.dataTransfer.getData("text/plain");
-          if (projId) handlePullToTopFocus(projId, true);
+          if (user.role === "CEO") {
+            e.preventDefault();
+            const projId = e.dataTransfer.getData("text/plain");
+            if (projId) handlePullToTopFocus(projId, true);
+          }
         }}
         className="p-6 bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white rounded-3xl shadow-2xl border-2 border-dashed border-blue-400/40 hover:border-blue-300 transition-all space-y-4"
       >
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-amber-400 text-slate-950 rounded-full uppercase tracking-wider">
-                Interactive Executive Tray
+                Official Company Alignment
               </span>
               <h2 className="text-xl font-extrabold text-white tracking-tight">CEO Top 3 Strategic Priorities</h2>
             </div>
             <p className="text-xs text-blue-200/90 mt-1">
-              💡 Drag & drop any project card into this tray or click <span className="font-bold text-amber-300">"📥 Pull into Top 3"</span> on any card below.
+              🎯 Company-wide strategic focus set by CEO Ryan Bantu. Visible to all departments.
+              {user.role === "CEO" && " Create custom priority cards or drag/pull project cards into slots below."}
             </p>
           </div>
-          <span className="text-xs font-semibold px-3 py-1 bg-white/10 rounded-xl text-blue-200 border border-white/10 self-start md:self-auto">
-            {topFocusProjects.length} / 3 Focus Slots Active
-          </span>
+
+          <div className="flex items-center gap-2 self-start md:self-auto">
+            {user.role === "CEO" && (
+              <button
+                onClick={() => {
+                  setNewProject({
+                    title: "",
+                    description: "",
+                    departmentId: user.departmentId || "",
+                    isTopFocus: true,
+                    progress: 0,
+                    targetDate: "",
+                  });
+                  setIsProjectModalOpen(true);
+                }}
+                className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs transition shadow-md flex items-center gap-1"
+              >
+                ✨ + Create CEO Priority Card
+              </button>
+            )}
+            <span className="text-xs font-semibold px-3 py-1.5 bg-white/10 rounded-xl text-blue-200 border border-white/10">
+              {topFocusProjects.length} / 3 Focus Slots Active
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -780,22 +817,28 @@ export default function DashboardClient({ user }: { user: User }) {
               return (
                 <div
                   key={proj.id}
-                  draggable
-                  onDragStart={(e) => e.dataTransfer.setData("text/plain", proj.id)}
-                  className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-amber-400/50 shadow-lg flex flex-col justify-between space-y-3 relative cursor-grab active:cursor-grabbing hover:border-amber-300 transition"
+                  draggable={user.role === "CEO"}
+                  onDragStart={(e) => {
+                    if (user.role === "CEO") e.dataTransfer.setData("text/plain", proj.id);
+                  }}
+                  className={`p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-amber-400/50 shadow-lg flex flex-col justify-between space-y-3 relative transition ${
+                    user.role === "CEO" ? "cursor-grab active:cursor-grabbing hover:border-amber-300" : ""
+                  }`}
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-mono">
                         Priority #{slotIdx + 1}
                       </span>
-                      <button
-                        onClick={() => handlePullToTopFocus(proj.id, false)}
-                        className="text-[11px] font-semibold text-rose-300 hover:text-rose-100 hover:underline"
-                        title="Remove from CEO Top 3 Focus"
-                      >
-                        ✕ Remove
-                      </button>
+                      {user.role === "CEO" && (
+                        <button
+                          onClick={() => handlePullToTopFocus(proj.id, false)}
+                          className="text-[11px] font-semibold text-rose-300 hover:text-rose-100 hover:underline"
+                          title="Remove from CEO Top 3 Focus"
+                        >
+                          ✕ Remove
+                        </button>
+                      )}
                     </div>
                     <h3 className="font-bold text-white text-sm leading-snug">{proj.title}</h3>
                     <p className="text-xs text-slate-300/90 line-clamp-2 mt-1">{proj.description}</p>
@@ -828,13 +871,32 @@ export default function DashboardClient({ user }: { user: User }) {
               return (
                 <div
                   key={`empty-slot-${slotIdx}`}
-                  className="p-6 bg-white/5 rounded-2xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center text-center text-slate-400 space-y-2 min-h-[160px]"
+                  onClick={() => {
+                    if (user.role === "CEO") {
+                      setNewProject({
+                        title: "",
+                        description: "",
+                        departmentId: user.departmentId || "",
+                        isTopFocus: true,
+                        progress: 0,
+                        targetDate: "",
+                      });
+                      setIsProjectModalOpen(true);
+                    }
+                  }}
+                  className={`p-6 bg-white/5 rounded-2xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center text-center text-slate-400 space-y-2 min-h-[160px] transition ${
+                    user.role === "CEO" ? "cursor-pointer hover:border-amber-400/80 hover:bg-white/10" : ""
+                  }`}
                 >
                   <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-slate-300 text-sm">
                     +{slotIdx + 1}
                   </div>
                   <div className="text-xs font-semibold text-slate-300">Priority #{slotIdx + 1} Slot Empty</div>
-                  <div className="text-[11px] text-slate-400">Drag any project card here or click "Pull into Top 3"</div>
+                  <div className="text-[11px] text-slate-400">
+                    {user.role === "CEO"
+                      ? "Click to +Create a CEO Priority Card or drag/pull a project here"
+                      : "Awaiting CEO Strategic Allocation"}
+                  </div>
                 </div>
               );
             }
