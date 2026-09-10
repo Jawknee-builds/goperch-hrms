@@ -53,11 +53,11 @@ async function main() {
   // 2. Create CEO & HODs & Employees
   const ceo = await db.user.upsert({
     where: { email: "ceo@goperch.com" },
-    update: {},
+    update: { name: "Ryan Bantu (CEO)" },
     create: {
       email: "ceo@goperch.com",
       password: defaultPasswordHash,
-      name: "Arthur Pendelton (CEO)",
+      name: "Ryan Bantu (CEO)",
       role: "CEO",
       title: "Chief Executive Officer",
       departmentId: deptLeadership.id,
@@ -67,11 +67,11 @@ async function main() {
   // HODs
   const hodSoftware = await db.user.upsert({
     where: { email: "hod.software@goperch.com" },
-    update: {},
+    update: { name: "Prasanna (Software HOD)" },
     create: {
       email: "hod.software@goperch.com",
       password: defaultPasswordHash,
-      name: "Sarah Chen (Software HOD)",
+      name: "Prasanna (Software HOD)",
       role: "HOD",
       title: "Head of Software Engineering",
       departmentId: deptSoftware.id,
@@ -80,11 +80,11 @@ async function main() {
 
   const hodElectronics = await db.user.upsert({
     where: { email: "hod.electronics@goperch.com" },
-    update: {},
+    update: { name: "Vikram (Electronics HOD)" },
     create: {
       email: "hod.electronics@goperch.com",
       password: defaultPasswordHash,
-      name: "Marcus Vance (Electronics HOD)",
+      name: "Vikram (Electronics HOD)",
       role: "HOD",
       title: "Head of Electronics & Hardware",
       departmentId: deptElectronics.id,
@@ -93,11 +93,11 @@ async function main() {
 
   const hodSales = await db.user.upsert({
     where: { email: "hod.sales@goperch.com" },
-    update: {},
+    update: { name: "Jonathan Jaladi (Sales HOD)" },
     create: {
       email: "hod.sales@goperch.com",
       password: defaultPasswordHash,
-      name: "Elena Rostova (Sales HOD)",
+      name: "Jonathan Jaladi (Sales HOD)",
       role: "HOD",
       title: "Head of Sales & Partnerships",
       departmentId: deptSales.id,
