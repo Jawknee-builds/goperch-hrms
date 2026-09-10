@@ -3,59 +3,63 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(req: Request) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(req.url);
-  const departmentIdParam = searchParams.get("departmentId");
-  const topFocusOnly = searchParams.get("topFocus") === "true";
-
-  let whereClause: any = {};
-
-  if (topFocusOnly) {
-    whereClause.isTopFocus = true;
-  } else if (currentUser.role === "CEO") {
-    if (departmentIdParam && departmentIdParam !== "ALL") {
-      whereClause.departmentId = departmentIdParam;
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-  } else if (currentUser.role === "HOD") {
-    whereClause.OR = [
-      { departmentId: currentUser.departmentId || undefined },
-      { createdById: currentUser.id },
-    ];
-  } else {
-    // Employee sees projects in their department or ones they created
-    whereClause.OR = [
-      { departmentId: currentUser.departmentId || undefined },
-      { createdById: currentUser.id },
-    ];
+
+    const { searchParams } = new URL(req.url);
+    const departmentIdParam = searchParams.get("departmentId");
+    const topFocusOnly = searchParams.get("topFocus") === "true";
+
+    let whereClause: any = {};
+
+    if (topFocusOnly) {
+      whereClause.isTopFocus = true;
+    } else if (currentUser.role === "CEO") {
+      if (departmentIdParam && departmentIdParam !== "ALL") {
+        whereClause.departmentId = departmentIdParam;
+      }
+    } else if (currentUser.role === "HOD") {
+      whereClause.OR = [
+        { departmentId: currentUser.departmentId || undefined },
+        { createdById: currentUser.id },
+      ];
+    } else {
+      whereClause.OR = [
+        { departmentId: currentUser.departmentId || undefined },
+        { createdById: currentUser.id },
+      ];
+    }
+
+    const projects = await db.project.findMany({
+      where: whereClause,
+      include: {
+        department: true,
+        createdBy: { select: { id: true, name: true, email: true, role: true } },
+        tasks: {
+          include: {
+            assignedTo: { select: { id: true, name: true, email: true } },
+            createdBy: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+        notes: {
+          include: {
+            author: { select: { id: true, name: true, email: true, role: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+      orderBy: [{ isTopFocus: "desc" }, { createdAt: "desc" }],
+    });
+
+    return NextResponse.json({ projects });
+  } catch (error: any) {
+    console.error("Fetch projects error:", error);
+    return NextResponse.json({ projects: [], error: error?.message || "Failed to fetch projects" }, { status: 500 });
   }
-
-  const projects = await db.project.findMany({
-    where: whereClause,
-    include: {
-      department: true,
-      createdBy: { select: { id: true, name: true, email: true, role: true } },
-      tasks: {
-        include: {
-          assignedTo: { select: { id: true, name: true, email: true } },
-          createdBy: { select: { id: true, name: true, email: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      },
-      notes: {
-        include: {
-          author: { select: { id: true, name: true, email: true, role: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      },
-    },
-    orderBy: [{ isTopFocus: "desc" }, { createdAt: "desc" }],
-  });
-
-  return NextResponse.json({ projects });
 }
 
 export async function POST(req: Request) {
@@ -146,4 +150,3 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
   }
 }
-

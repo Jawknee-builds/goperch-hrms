@@ -40,24 +40,31 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
 }
 
 export async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("hrms_token")?.value;
-  if (!token) return null;
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("hrms_token")?.value;
+    if (!token) return null;
 
-  const payload = await verifyToken(token);
-  if (!payload?.userId) return null;
+    const payload = await verifyToken(token);
+    if (!payload?.userId) return null;
 
-  const user = await db.user.findUnique({
-    where: { id: payload.userId },
-    include: {
-      department: true,
-    },
-  });
+    const user = await db.user.findUnique({
+      where: { id: payload.userId },
+      include: {
+        department: true,
+      },
+    });
 
-  if (!user) return null;
+    if (!user) return null;
 
-  // Omit password hash
-  const { password, ...userWithoutPassword } = user;
-  return userWithoutPassword;
+    // Omit password hash
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  } catch (err: any) {
+    if (err && typeof err === "object" && err.digest === "DYNAMIC_SERVER_USAGE") {
+      throw err;
+    }
+    console.error("Error in getCurrentUser:", err);
+    return null;
+  }
 }
-

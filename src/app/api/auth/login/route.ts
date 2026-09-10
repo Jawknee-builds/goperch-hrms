@@ -47,9 +47,15 @@ export async function POST(req: Request) {
       message: "Logged in successfully",
       user: userWithoutPassword,
     });
-  } catch (error) {
-    console.error("Login error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Login route error:", error);
+    const errorMessage = error?.message || "Internal server error";
+    return NextResponse.json(
+      {
+        error: "Database error during login. Please ensure your Vercel Postgres database is attached and seeded with 'npx prisma db push && npx prisma db seed'.",
+        details: errorMessage,
+      },
+      { status: 500 }
+    );
   }
 }
-

@@ -3,49 +3,52 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(req: Request) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(req.url);
-  const departmentIdParam = searchParams.get("departmentId");
-
-  let whereClause: any = {};
-
-  if (currentUser.role === "CEO") {
-    if (departmentIdParam && departmentIdParam !== "ALL") {
-      whereClause.departmentId = departmentIdParam;
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-  } else if (currentUser.role === "HOD") {
-    // HOD sees tasks in their department OR tasks assigned to them/created by them
-    whereClause.OR = [
-      { departmentId: currentUser.departmentId || undefined },
-      { assignedToId: currentUser.id },
-      { createdById: currentUser.id },
-    ];
-  } else {
-    // EMPLOYEE sees tasks in their department OR assigned to them
-    whereClause.OR = [
-      { departmentId: currentUser.departmentId || undefined },
-      { assignedToId: currentUser.id },
-    ];
+
+    const { searchParams } = new URL(req.url);
+    const departmentIdParam = searchParams.get("departmentId");
+
+    let whereClause: any = {};
+
+    if (currentUser.role === "CEO") {
+      if (departmentIdParam && departmentIdParam !== "ALL") {
+        whereClause.departmentId = departmentIdParam;
+      }
+    } else if (currentUser.role === "HOD") {
+      whereClause.OR = [
+        { departmentId: currentUser.departmentId || undefined },
+        { assignedToId: currentUser.id },
+        { createdById: currentUser.id },
+      ];
+    } else {
+      whereClause.OR = [
+        { departmentId: currentUser.departmentId || undefined },
+        { assignedToId: currentUser.id },
+      ];
+    }
+
+    const tasks = await db.task.findMany({
+      where: whereClause,
+      include: {
+        department: true,
+        createdBy: { select: { id: true, name: true, email: true, role: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } },
+        milestone: { select: { id: true, title: true } },
+        project: { select: { id: true, title: true } },
+        hurdles: { select: { id: true, title: true, status: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({ tasks });
+  } catch (error: any) {
+    console.error("Fetch tasks error:", error);
+    return NextResponse.json({ tasks: [], error: error?.message || "Failed to fetch tasks" }, { status: 500 });
   }
-
-  const tasks = await db.task.findMany({
-    where: whereClause,
-    include: {
-      department: true,
-      createdBy: { select: { id: true, name: true, email: true, role: true } },
-      assignedTo: { select: { id: true, name: true, email: true, role: true } },
-      milestone: { select: { id: true, title: true } },
-      project: { select: { id: true, title: true } },
-      hurdles: { select: { id: true, title: true, status: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return NextResponse.json({ tasks });
 }
 
 export async function POST(req: Request) {
@@ -63,7 +66,6 @@ export async function POST(req: Request) {
 
     let targetDeptId = departmentId || currentUser.departmentId;
 
-    // If assigning to a specific user, look up their department
     if (assignedToId) {
       const assignee = await db.user.findUnique({ where: { id: assignedToId } });
       if (assignee?.departmentId) {
@@ -126,7 +128,6 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // Permission check for updates
     if (currentUser.role === "EMPLOYEE") {
       if (existingTask.assignedToId !== currentUser.id && existingTask.createdById !== currentUser.id) {
         return NextResponse.json({ error: "Forbidden: You can only update your own tasks" }, { status: 403 });
@@ -151,8 +152,6 @@ export async function PATCH(req: Request) {
         project: { select: { id: true, title: true } },
       },
     });
-
-    return NextResponse.json({ task: updatedTask });
 
     return NextResponse.json({ task: updatedTask });
   } catch (error) {
