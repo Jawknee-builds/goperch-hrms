@@ -3,9 +3,16 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
-const pool = new pg.Pool({ connectionString });
+// Support SSL for hosted cloud databases (Vercel Postgres, Neon, Supabase, Render, Railway)
+const isLocalhost = connectionString?.includes("localhost") || connectionString?.includes("127.0.0.1");
+
+const pool = new pg.Pool({
+  connectionString,
+  ssl: isLocalhost ? false : { rejectUnauthorized: false },
+});
+
 const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {
