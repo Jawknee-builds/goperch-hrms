@@ -1,105 +1,95 @@
-# 🦅 GoPerch HRMS & Operations Platform
+# 🦅 GoPerch HRMS & Operations
 
-> **One platform. Every department.**  
-> Next-generation HRMS and Operations Suite designed for GoPerch Leadership, Department HODs, and cross-functional teams.
+> **Clutter-free. No fluff. Precise project tracking.**
 
----
-
-## 🛡️ Core Leadership & Demo Login Accounts
-
-All accounts use standard demo password: **`password123`**
-
-| Executive / Leader | Role & Department | Email Address | Account Protection |
-| :--- | :--- | :--- | :--- |
-| **Ryan Bantu** | CEO (Executive Leadership) | `ceo@goperch.com` | 🛡️ Protected Core Leader |
-| **Jonathan Jaladi** | HOD — Sales | `hod.sales@goperch.com` | 🛡️ Protected Core Leader |
-| **Vikram** | HOD — Electronics | `hod.electronics@goperch.com` | 🛡️ Protected Core Leader |
-| **Prasanna** | HOD — Software | `hod.software@goperch.com` | 🛡️ Protected Core Leader |
-| **Alex Dev** | Software Engineer | `emp.software@goperch.com` | Standard Employee |
-| **Priya Patel** | Hardware Engineer | `emp.electronics@goperch.com` | Standard Employee |
-| **James Wilson** | Sales Representative | `emp.sales@goperch.com` | Standard Employee |
+GoPerch HRMS is an ultra-lean operational management system built for high-velocity execution. Unlike bloated traditional enterprise tools, GoPerch focuses on **radical clarity, zero friction, and high-impact accountability** across Software, Electronics, Sales, and Leadership.
 
 ---
 
-## ✨ Key Features & Capability Matrix
+## ⚡ Design Philosophy
 
-### 🎯 1. CEO Top 3 Strategic Priorities Tray
-- **Drag-and-Drop Prioritization**: Executive drag-and-drop slot reallocation to lock in the top 3 company priorities.
-- **Visual Rank Badging**: Slot `#1`, `#2`, and `#3` visual badging with immediate demotion/promotion logic.
-
-### 📁 2. Project Management & Live Execution Notes
-- **Interactive Projects Feed**: Live project cards with percentage progress sliders and real-time execution notes.
-- **1-Click Pull Tray**: Pull project-specific tasks into the main Kanban workspace instantly.
-
-### ⚡ 3. Universal Kanban Drag & Drop
-- **Status Workflows**: Seamless column transitions (`TODO` ➔ `IN_PROGRESS` ➔ `IN_REVIEW` ➔ `COMPLETED`).
-- **1-Click Push & Pull Buttons**: Quick-action controls on every task card for rapid status changes.
-
-### 🔄 4. Cross-Department Task Delegation
-- **Leadership Delegation**: CEO and HODs can assign high-impact tasks across any department.
-- **Role Scoped Permissions**: Department-level filtering with department badges and assignee avatars.
-
-### 👥 5. Roster Management & Soft-Delete Backup Protection
-- **Add Employee Modal**: Instant onboarding into Sales, Electronics, Software, or Leadership.
-- **Soft-Delete Archival**: Archived staff are safely backed up with 1-click restoration from the Backup Roster.
-- **Core Leader Guard**: API & UI level protection preventing accidental deletion of core executives.
-
-### 💬 6. Real-Time Chat & Department Channels
-- **Integrated Team Channels**: `#general`, `#software-engineering`, `#hardware-lab`, and `#sales-pipeline`.
-- **Instant Messaging**: Seamless cross-department communication.
+1. **Top 3 Strategic Priority Lock**: Executive leadership is restricted to 3 active top priorities at any time. Forces focus over noise.
+2. **1-Click Execution Workflows**: Move tasks between status columns or pull project backlogs with a single click. No multi-step modal friction.
+3. **Cross-Department Visibility**: Instant real-time view of hardware, software, and sales execution under one unified roof.
+4. **Resilient Leadership Guard**: Protected core accounts ensure key leadership infrastructure remains immutable while supporting soft-delete roster backups.
 
 ---
 
-## 🛠️ Tech Stack
+## 🔑 Core Team Access & Credentials
 
-- **Framework**: Next.js (App Router, Server Actions, API Routes)
-- **Styling**: Tailwind CSS & Lucide Icons (GoPerch Light Theme: `#FAFBFD`)
-- **Database & ORM**: PostgreSQL & Prisma 7 (with `@prisma/adapter-pg`)
-- **Authentication**: JWT & HttpOnly Secure Cookies
+Password across all demo accounts: `password123`
 
----
-
-## 🚀 Local Development Setup
-
-1. **Clone repository**:
-   ```bash
-   git clone https://github.com/Jawknee-builds/goperch-hrms.git
-   cd goperch-hrms
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment Variables**:
-   Create a `.env` file in the root directory:
-   ```env
-   DATABASE_URL="postgresql://user:password@localhost:5432/goperch_hrms?sslmode=disable"
-   JWT_SECRET="goperch_super_secret_jwt_key_2026"
-   ```
-
-4. **Push Schema & Seed Database**:
-   ```bash
-   npx prisma db push
-   npx prisma db seed
-   ```
-
-5. **Start Dev Server**:
-   ```bash
-   npm run dev
-   ```
-   Open `http://localhost:3000` and sign in with any of the demo credentials above!
+| Leader / Employee | Role | Department | Email | Protection |
+| :--- | :--- | :--- | :--- | :--- |
+| **Ryan Bantu** | CEO | Leadership | `ceo@goperch.com` | 🛡️ Protected Core Leader |
+| **Jonathan Jaladi** | HOD | Sales | `hod.sales@goperch.com` | 🛡️ Protected Core Leader |
+| **Vikram** | HOD | Electronics | `hod.electronics@goperch.com` | 🛡️ Protected Core Leader |
+| **Prasanna** | HOD | Software | `hod.software@goperch.com` | 🛡️ Protected Core Leader |
+| **Alex Dev** | Engineer | Software | `emp.software@goperch.com` | Standard Member |
+| **Priya Patel** | Hardware Eng | Electronics | `emp.electronics@goperch.com` | Standard Member |
+| **James Wilson** | Sales Rep | Sales | `emp.sales@goperch.com` | Standard Member |
 
 ---
 
-## 🌐 Vercel Production Deployment
+## 🛠️ Feature Modules
 
-To seed or reset your Vercel Cloud Postgres / Supabase database:
-```bash
-# 1. Push Prisma schema to cloud DB
-npx prisma db push
+### 🎯 CEO Top 3 Focus Tray
+- Interactive drag-and-drop slot assignment (`#1`, `#2`, `#3`).
+- Automatic demotion when promoting new high-priority initiatives.
 
-# 2. Seed official leadership & sample data
-npx prisma db seed
+### 📊 Project Tracking & Live Execution Feed
+- Granular progress sliders & milestone indicators.
+- Live execution notes feed attached directly to projects.
+- **1-Click Pull Tray**: Load project-specific tasks into the main Kanban board instantly.
+
+### 📋 Universal Kanban Workspace
+- Statuses: `TODO` ➔ `IN_PROGRESS` ➔ `IN_REVIEW` ➔ `COMPLETED`.
+- Supports drag-and-drop or **1-Click Push/Pull** quick buttons.
+- Filterable by department (Software, Electronics, Sales, Leadership).
+
+### 👥 Roster & Soft-Delete Archival
+- Onboard new employees via **Add Employee** modal.
+- Soft-delete archival preserves user history with 1-click restore.
+- `🛡️ Core Leader` protection prevents accidental removal of CEO and HODs.
+
+### 💬 Real-Time Department Channels
+- `#general`, `#software-engineering`, `#hardware-lab`, `#sales-pipeline`.
+- In-context messaging per department.
+
+---
+
+## 🚀 Quickstart
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL database (or local SQLite/Postgres)
+
+### Environment Variables (`.env`)
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/goperch_hrms?sslmode=disable"
+JWT_SECRET="goperch_super_secret_jwt_key_2026"
 ```
+
+### Installation & Run
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Push database schema & seed leadership accounts
+npx prisma db push
+npx prisma db seed
+
+# 3. Launch development server
+npm run dev
+```
+
+Visit `http://localhost:3000` to access the platform.
+
+---
+
+## 🏗️ Architecture
+
+- **Framework**: Next.js 16 (App Router)
+- **Styling**: Tailwind CSS & Lucide Icons
+- **Database & ORM**: PostgreSQL + Prisma 7 (`@prisma/adapter-pg`)
+- **Authentication**: JWT via HTTP-only secure cookies
