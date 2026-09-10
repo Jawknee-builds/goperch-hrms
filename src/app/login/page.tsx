@@ -79,40 +79,40 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={(e) => handleLogin(e)} className="bg-white p-6 rounded-3xl border border-slate-200/80 space-y-4 shadow-xl shadow-slate-200/50">
+        <form onSubmit={(e) => handleLogin(e)} className="bg-white p-6 rounded-3xl border border-slate-300 space-y-4 shadow-xl shadow-slate-300/40">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+            <label className="block text-xs font-extrabold text-slate-800 mb-1">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+            <label className="block text-xs font-extrabold text-slate-800 mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-blue-500/25 disabled:opacity-50"
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-sm transition shadow-lg shadow-blue-500/25 disabled:opacity-50"
           >
             {loading ? "Signing in..." : "Sign In to GoPerch HRMS"}
           </button>
         </form>
 
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 space-y-3 shadow-md shadow-slate-200/40">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider text-center">
+        <div className="bg-white p-5 rounded-3xl border border-slate-300 space-y-3 shadow-md shadow-slate-300/30">
+          <div className="text-xs font-extrabold text-slate-700 uppercase tracking-wider text-center">
             Quick 1-Click Demo Login Accounts
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -125,10 +125,10 @@ export default function LoginPage() {
                   setPassword("password123");
                   handleLogin(undefined, acc.email, "password123");
                 }}
-                className="p-2.5 text-left bg-slate-50 hover:bg-blue-50/60 border border-slate-200/80 hover:border-blue-300 rounded-xl transition group"
+                className="p-2.5 text-left bg-slate-50 hover:bg-blue-50 border border-slate-300 hover:border-blue-400 rounded-xl transition group"
               >
-                <div className="font-bold text-slate-900 group-hover:text-blue-600">{acc.label}</div>
-                <div className="text-[10px] text-slate-500 font-medium">{acc.dept} &bull; {acc.role}</div>
+                <div className="font-extrabold text-slate-900 group-hover:text-blue-700">{acc.label}</div>
+                <div className="text-[10px] text-slate-600 font-bold">{acc.dept} &bull; {acc.role}</div>
               </button>
             ))}
           </div>

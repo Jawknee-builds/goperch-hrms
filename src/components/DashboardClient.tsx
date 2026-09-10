@@ -598,37 +598,37 @@ export default function DashboardClient({ user }: { user: User }) {
           e.dataTransfer.setData("taskId", task.id);
           e.dataTransfer.setData("type", "task");
         }}
-        className="bg-white p-3.5 rounded-xl border border-slate-200/80 text-xs space-y-1.5 shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 hover:shadow-md transition"
+        className="bg-white p-3.5 rounded-xl border border-slate-300 text-xs space-y-2 shadow-xs cursor-grab active:cursor-grabbing hover:border-blue-500 hover:shadow-md transition"
       >
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-1.5 font-semibold text-slate-900">
-            <span className="text-slate-400 font-bold" title="Drag Task Card">⠿</span>
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex items-start gap-1.5 font-bold text-slate-900 leading-tight">
+            <span className="text-slate-400 font-black cursor-grab" title="Drag Task Card">⠿</span>
             <span>{task.title}</span>
           </div>
-          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-            task.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700" :
-            task.status === "IN_REVIEW" ? "bg-amber-50 text-amber-700" :
-            task.status === "IN_PROGRESS" ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"
+          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
+            task.status === "COMPLETED" ? "bg-emerald-100 text-emerald-900 border-emerald-300" :
+            task.status === "IN_REVIEW" ? "bg-amber-100 text-amber-900 border-amber-300" :
+            task.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-900 border-blue-300" : "bg-slate-100 text-slate-800 border-slate-300"
           }`}>
             {task.status.replace("_", " ")}
           </span>
         </div>
         
-        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
-          <span>Assigned: {task.assignedTo?.name || "Unassigned"}</span>
+        <div className="flex items-center justify-between text-[11px] text-slate-700 font-medium pt-0.5">
+          <span>Assigned: <strong className="text-slate-900 font-extrabold">{task.assignedTo?.name || "Unassigned"}</strong></span>
           {task.project && (
-            <span className="font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
+            <span className="font-extrabold text-blue-900 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-md text-[10px]">
               📁 {task.project.title}
             </span>
           )}
         </div>
 
         {/* Push & Pull 1-Click Status Controls */}
-        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
+        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-200">
           {task.status === "IN_PROGRESS" && (
             <button
               onClick={() => handleUpdateTaskStatus(task.id, "TODO")}
-              className="px-2 py-0.5 text-[10px] font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+              className="px-2 py-1 text-[10px] font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors"
             >
               ← Pull to TODO
             </button>
@@ -636,7 +636,7 @@ export default function DashboardClient({ user }: { user: User }) {
           {task.status === "IN_REVIEW" && (
             <button
               onClick={() => handleUpdateTaskStatus(task.id, "IN_PROGRESS")}
-              className="px-2 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-md transition-colors"
+              className="px-2 py-1 text-[10px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-md transition-colors"
             >
               ← Pull to IN PROGRESS
             </button>
@@ -644,7 +644,7 @@ export default function DashboardClient({ user }: { user: User }) {
           {task.status === "COMPLETED" && (
             <button
               onClick={() => handleUpdateTaskStatus(task.id, "IN_REVIEW")}
-              className="px-2 py-0.5 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors"
+              className="px-2 py-1 text-[10px] font-bold text-emerald-900 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-md transition-colors"
             >
               ← Re-open
             </button>
@@ -653,7 +653,7 @@ export default function DashboardClient({ user }: { user: User }) {
           {task.status === "TODO" && (
             <button
               onClick={() => handleUpdateTaskStatus(task.id, "IN_PROGRESS")}
-              className="px-2 py-0.5 text-[10px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors shadow-sm ml-auto"
+              className="px-2.5 py-1 text-[10px] font-extrabold text-white bg-blue-600 hover:bg-blue-700 border border-blue-700 rounded-md transition-colors shadow-2xs ml-auto"
             >
               Push to IN PROGRESS →
             </button>
@@ -661,7 +661,7 @@ export default function DashboardClient({ user }: { user: User }) {
           {task.status === "IN_PROGRESS" && (
             <button
               onClick={() => handleUpdateTaskStatus(task.id, "IN_REVIEW")}
-              className="px-2 py-0.5 text-[10px] font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-md transition-colors shadow-sm ml-auto"
+              className="px-2.5 py-1 text-[10px] font-extrabold text-white bg-amber-600 hover:bg-amber-700 border border-amber-700 rounded-md transition-colors shadow-2xs ml-auto"
             >
               Push to IN REVIEW →
             </button>
@@ -669,7 +669,7 @@ export default function DashboardClient({ user }: { user: User }) {
           {task.status === "IN_REVIEW" && (
             <button
               onClick={() => handleUpdateTaskStatus(task.id, "COMPLETED")}
-              className="px-2 py-0.5 text-[10px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md transition-colors shadow-sm ml-auto"
+              className="px-2.5 py-1 text-[10px] font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 rounded-md transition-colors shadow-2xs ml-auto"
             >
               Push to COMPLETED ✓
             </button>
