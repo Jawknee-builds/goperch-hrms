@@ -13,7 +13,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans">
       <Navbar user={user} />
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
         <DashboardClient user={user} />
