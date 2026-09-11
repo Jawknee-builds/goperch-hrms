@@ -1,9 +1,18 @@
 import "dotenv/config";
+import path from "path";
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { createClient } from "@libsql/client";
 
-const adapter = new PrismaLibSql({ url: process.env.DATABASE_URL || "file:./dev.db" });
+function getDatabaseUrl() {
+  const envUrl = process.env.DATABASE_URL;
+  if (envUrl && envUrl.startsWith("file:") && !envUrl.includes("dev.db")) {
+    return envUrl;
+  }
+  const absolutePath = path.join(process.cwd(), "dev.db");
+  return `file:${absolutePath}`;
+}
+
+const adapter = new PrismaLibSql({ url: getDatabaseUrl() });
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

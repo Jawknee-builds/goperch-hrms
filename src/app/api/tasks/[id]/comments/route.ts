@@ -100,3 +100,4 @@ export async function POST(
     return NextResponse.json({ error: error?.message || "Failed to create comment" }, { status: 500 });
   }
 }
+
