@@ -40,6 +40,12 @@ export async function GET(req: Request) {
         milestone: { select: { id: true, title: true } },
         project: { select: { id: true, title: true } },
         hurdles: { select: { id: true, title: true, status: true } },
+        comments: {
+          include: {
+            author: { select: { id: true, name: true, email: true, role: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -150,8 +156,26 @@ export async function PATCH(req: Request) {
         assignedTo: { select: { id: true, name: true, email: true } },
         milestone: { select: { id: true, title: true } },
         project: { select: { id: true, title: true } },
+        comments: {
+          include: {
+            author: { select: { id: true, name: true, email: true, role: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
+
+    // Notify task creator (Manager/CEO) if status changed by employee/someone else
+    if (status && status !== existingTask.status && existingTask.createdById !== currentUser.id) {
+      await db.notification.create({
+        data: {
+          userId: existingTask.createdById,
+          title: "Ticket Status Moved",
+          message: `${currentUser.name} moved '${existingTask.title}' to ${status}.`,
+          link: "#tasks",
+        },
+      });
+    }
 
     return NextResponse.json({ task: updatedTask });
   } catch (error) {

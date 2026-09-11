@@ -1,6 +1,42 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  LayoutDashboard,
+  Kanban,
+  Briefcase,
+  CheckSquare,
+  Target,
+  Users,
+  GraduationCap,
+  HelpCircle,
+  MessageSquare,
+  Plus,
+  Crown,
+  Sparkles,
+  Lock,
+  Clock,
+  CheckCircle2,
+  CircleDashed,
+  AlertCircle,
+  Send,
+  Star,
+  Building2,
+  UserCheck,
+  Search,
+  ArrowRight,
+  ArrowLeft,
+  MessageCircle,
+  X,
+  ChevronDown,
+  ChevronRight,
+  Flame,
+  ShieldCheck,
+  Filter,
+  Calendar,
+  Layers,
+  AlertTriangle
+} from "lucide-react";
 
 interface User {
   id: string;
@@ -26,6 +62,18 @@ interface Milestone {
   progress: number;
 }
 
+interface TaskComment {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+}
+
 interface Task {
   id: string;
   title: string;
@@ -38,36 +86,36 @@ interface Task {
   assignedTo?: { id: string; name: string; email: string; role?: string } | null;
   milestone?: { id: string; title: string } | null;
   project?: { id: string; title: string } | null;
-  projectId?: string | null;
+  comments?: TaskComment[];
 }
 
 interface ProjectNote {
   id: string;
   content: string;
   createdAt: string;
-  author: { id: string; name: string; email: string; role: string };
+  author: { name: string };
 }
 
 interface Project {
   id: string;
   title: string;
-  description?: string | null;
+  description?: string;
   status: string;
   progress: number;
   isTopFocus: boolean;
-  targetDate?: string | null;
+  targetDate?: string;
   department?: { id: string; name: string; code: string } | null;
-  createdBy: { id: string; name: string; email: string; role?: string };
-  tasks: Task[];
-  notes: ProjectNote[];
+  createdBy: { id: string; name: string };
+  tasks?: Task[];
+  notes?: ProjectNote[];
 }
 
-interface UserSkill {
+interface Skill {
   id: string;
-  proficiency: "LEARNING" | "INTERMEDIATE" | "ADVANCED" | "MASTERED";
+  name: string;
+  category: string;
+  proficiency?: string;
   notes?: string;
-  user: { id?: string; name: string; email: string; title?: string; department?: { name: string } };
-  skill: { name: string; category: string };
 }
 
 interface Hurdle {
@@ -76,1751 +124,1375 @@ interface Hurdle {
   question: string;
   answer?: string;
   status: "OPEN" | "RESOLVED";
-  askedBy: { id?: string; name: string; email: string; department?: { name: string } };
-  answeredBy?: { name: string; email: string } | null;
-  task?: { title: string } | null;
-  createdAt: string;
-}
-
-interface Department {
-  id: string;
-  name: string;
-  code: string;
-  description?: string | null;
-  users: { id: string; name: string; email: string; role: string; title?: string; departmentId?: string | null; isArchived?: boolean }[];
+  askedBy: { name: string };
+  answeredBy?: { name: string };
 }
 
 interface Channel {
   id: string;
   name: string;
-  description?: string | null;
-  department?: { name: string } | null;
+  description?: string;
+  departmentId?: string | null;
 }
 
-interface ChatMessage {
+interface Message {
   id: string;
   content: string;
   createdAt: string;
-  sender: { id: string; name: string; email: string; role: string; title?: string };
-  recipient?: { id: string; name: string; email: string; role: string } | null;
+  sender: { id: string; name: string; email: string; role?: string };
 }
 
-interface FullEmployeeProfile {
-  id: string;
-  name: string;
-  email: string;
-  role: "CEO" | "HOD" | "EMPLOYEE";
-  title?: string | null;
-  department?: { name: string; code: string } | null;
-  isArchived?: boolean;
-  metrics: {
-    totalTasks: number;
-    completedTasks: number;
-    completionRate: number;
-  };
-  tasksAssigned: Task[];
-  tasksCreated: Task[];
-  skills: UserSkill[];
-  hurdlesAsked: Hurdle[];
+interface DashboardClientProps {
+  user: User;
 }
 
-export default function DashboardClient({ user }: { user: User }) {
-  const [activeTab, setActiveTab] = useState<"overview" | "projects" | "tasks" | "chat" | "directory" | "skills" | "hurdles">("overview");
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>("ALL");
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("ALL");
+export default function DashboardClient({ user }: DashboardClientProps) {
+  const [activeTab, setActiveTab] = useState<"kanban" | "projects" | "milestones" | "team" | "skills" | "hurdles" | "chat">("kanban");
+  const [departmentIdFilter, setDepartmentIdFilter] = useState<string>("ALL");
 
-  const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
-  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
-
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  // Data states
+  const [departments, setDepartments] = useState<any[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [userSkills, setUserSkills] = useState<UserSkill[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [teamMembers, setTeamMembers] = useState<User[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [hurdles, setHurdles] = useState<Hurdle[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Employee Management State
-  const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
-  const [showArchivedRoster, setShowArchivedRoster] = useState(false);
-  const [archivedEmployees, setArchivedEmployees] = useState<User[]>([]);
-  const [newEmployee, setNewEmployee] = useState({
-    name: "",
-    email: "",
-    title: "",
-    role: "EMPLOYEE",
-    departmentId: user.departmentId || "",
-    password: "password123",
-  });
-
-  // Chat State
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
-  const [selectedDmUser, setSelectedDmUser] = useState<User | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [messageInput, setMessageInput] = useState("");
-  const [isChannelModalOpen, setIsChannelModalOpen] = useState(false);
-  const [newChannelName, setNewChannelName] = useState("");
-  const [newChannelDesc, setNewChannelDesc] = useState("");
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [newMessageContent, setNewMessageContent] = useState("");
 
-  // Employee Profile Modal State
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
-  const [employeeProfile, setEmployeeProfile] = useState<FullEmployeeProfile | null>(null);
+  // Modals & Drawers
+  const [selectedTaskTicket, setSelectedTaskTicket] = useState<Task | null>(null);
+  const [newCommentInput, setNewCommentInput] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-  // Project Note Input State
-  const [projectNoteInput, setProjectNoteInput] = useState<Record<string, string>>({});
+  const [showCreatePriorityModal, setShowCreatePriorityModal] = useState(false);
+  const [prioritySlotIndex, setPrioritySlotIndex] = useState<number | null>(null);
+  const [newPriorityTitle, setNewPriorityTitle] = useState("");
+  const [newPriorityDesc, setNewPriorityDesc] = useState("");
+  const [newPriorityDept, setNewPriorityDept] = useState("");
 
-  // Create Project Modal States
-  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
-  const [newProject, setNewProject] = useState({
-    title: "",
-    description: "",
-    departmentId: user.departmentId || "",
-    isTopFocus: false,
-    progress: 0,
-    targetDate: "",
-  });
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDesc, setNewTaskDesc] = useState("");
+  const [newTaskPriority, setNewTaskPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
+  const [newTaskAssigneeId, setNewTaskAssigneeId] = useState("");
+  const [newTaskProjectId, setNewTaskProjectId] = useState("");
 
-  // Create Task Modal States
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [newTask, setNewTask] = useState({
-    title: "",
-    description: "",
-    priority: "MEDIUM",
-    assignedToId: "",
-    departmentId: user.departmentId || "",
-    milestoneId: "",
-    projectId: "",
-  });
-
+  // Initial fetch
   const fetchData = async () => {
-    setLoading(true);
     try {
-      const [deptRes, msRes, projRes, taskRes, skillRes, hurdleRes, chRes, empRes] = await Promise.all([
+      const [deptRes, projRes, taskRes, msRes, teamRes, skillRes, hurdleRes, chanRes] = await Promise.all([
         fetch("/api/departments"),
-        fetch("/api/milestones"),
         fetch("/api/projects"),
-        fetch(`/api/tasks${selectedDeptFilter !== "ALL" ? `?departmentId=${selectedDeptFilter}` : ""}`),
+        fetch(`/api/tasks${departmentIdFilter !== "ALL" ? `?departmentId=${departmentIdFilter}` : ""}`),
+        fetch("/api/milestones"),
+        fetch("/api/employees"),
         fetch("/api/skills"),
         fetch("/api/hurdles"),
         fetch("/api/chat/channels"),
-        fetch("/api/employees?archived=true"),
       ]);
 
       if (deptRes.ok) {
-        const deptList: Department[] = (await deptRes.json()).departments;
-        const sortedDeptList = [...deptList].sort((a, b) => {
-          const aMatch = (user.departmentId && a.id === user.departmentId) || (user.department?.name && a.name.toLowerCase() === user.department.name.toLowerCase());
-          const bMatch = (user.departmentId && b.id === user.departmentId) || (user.department?.name && b.name.toLowerCase() === user.department.name.toLowerCase());
-          if (aMatch && !bMatch) return -1;
-          if (!aMatch && bMatch) return 1;
-          return 0;
-        });
-        setDepartments(sortedDeptList);
-        if (sortedDeptList.length > 0 && Object.keys(expandedDepts).length === 0) {
-          const userDeptObj = sortedDeptList.find((d) => (user.departmentId && d.id === user.departmentId) || (user.department?.name && d.name.toLowerCase() === user.department.name.toLowerCase())) || sortedDeptList[0];
-          setExpandedDepts({ [userDeptObj.id]: true });
-        }
+        const d = await deptRes.json();
+        setDepartments(d.departments || []);
       }
-      if (msRes.ok) setMilestones((await msRes.json()).milestones);
       if (projRes.ok) {
-        const projList: Project[] = (await projRes.json()).projects;
-        const sortedProjList = [...projList].sort((a, b) => {
-          const aMatch = (user.departmentId && a.department?.id === user.departmentId) || (user.department?.name && a.department?.name?.toLowerCase() === user.department.name.toLowerCase());
-          const bMatch = (user.departmentId && b.department?.id === user.departmentId) || (user.department?.name && b.department?.name?.toLowerCase() === user.department.name.toLowerCase());
-          if (aMatch && !bMatch) return -1;
-          if (!aMatch && bMatch) return 1;
-          return 0;
-        });
-        setProjects(sortedProjList);
-        if (sortedProjList.length > 0 && Object.keys(expandedProjects).length === 0) {
-          setExpandedProjects({ [sortedProjList[0].id]: true });
-        }
+        const p = await projRes.json();
+        setProjects(p.projects || []);
       }
       if (taskRes.ok) {
-        const rawTasks: Task[] = (await taskRes.json()).tasks;
-        const sortedTasks = [...rawTasks].sort((a, b) => {
-          const aMatch = user.department?.name && a.department?.name?.toLowerCase() === user.department.name.toLowerCase();
-          const bMatch = user.department?.name && b.department?.name?.toLowerCase() === user.department.name.toLowerCase();
-          if (aMatch && !bMatch) return -1;
-          if (!aMatch && bMatch) return 1;
-          return 0;
-        });
-        setTasks(sortedTasks);
+        const t = await taskRes.json();
+        setTasks(t.tasks || []);
       }
-      if (skillRes.ok) setUserSkills((await skillRes.json()).userSkills);
-      if (hurdleRes.ok) setHurdles((await hurdleRes.json()).hurdles);
-      if (chRes.ok) {
-        const chList: Channel[] = (await chRes.json()).channels;
-        const sortedChList = [...chList].sort((a, b) => {
-          const aMatch = user.department?.name && a.department?.name?.toLowerCase() === user.department.name.toLowerCase();
-          const bMatch = user.department?.name && b.department?.name?.toLowerCase() === user.department.name.toLowerCase();
-          if (aMatch && !bMatch) return -1;
-          if (!aMatch && bMatch) return 1;
-          return 0;
-        });
-        setChannels(sortedChList);
-        if (sortedChList.length > 0 && !selectedChannelId && !selectedDmUser) {
-          setSelectedChannelId(sortedChList[0].id);
+      if (msRes.ok) {
+        const m = await msRes.json();
+        setMilestones(m.milestones || []);
+      }
+      if (teamRes.ok) {
+        const tm = await teamRes.json();
+        setTeamMembers(tm.employees || []);
+      }
+      if (skillRes.ok) {
+        const sk = await skillRes.json();
+        setSkills(sk.skills || []);
+      }
+      if (hurdleRes.ok) {
+        const h = await hurdleRes.json();
+        setHurdles(h.hurdles || []);
+      }
+      if (chanRes.ok) {
+        const ch = await chanRes.json();
+        const chanList = ch.channels || [];
+        setChannels(chanList);
+        if (chanList.length > 0 && !activeChannelId) {
+          setActiveChannelId(chanList[0].id);
         }
       }
-      if (empRes.ok) {
-        const allEmps: User[] = (await empRes.json()).employees;
-        setArchivedEmployees(allEmps.filter((e) => e.isArchived));
-      }
     } catch (err) {
-      console.error("Error fetching dashboard data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchChatMessages = async () => {
-    try {
-      let url = "";
-      if (selectedChannelId) {
-        url = `/api/chat/messages?channelId=${selectedChannelId}`;
-      } else if (selectedDmUser) {
-        url = `/api/chat/messages?recipientId=${selectedDmUser.id}`;
-      }
-      if (!url) return;
-
-      const res = await fetch(url);
-      if (res.ok) {
-        setChatMessages((await res.json()).messages);
-      }
-    } catch (err) {
-      console.error("Error fetching chat messages:", err);
+      console.error("Fetch data error:", err);
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, [selectedDeptFilter]);
+  }, [departmentIdFilter]);
 
+  // Fetch chat messages when active channel changes
   useEffect(() => {
-    if (activeTab === "chat") {
-      fetchChatMessages();
-      const interval = setInterval(fetchChatMessages, 3000);
-      return () => clearInterval(interval);
-    }
-  }, [activeTab, selectedChannelId, selectedDmUser]);
-
-  const toggleDeptAccordion = (deptId: string) => {
-    setExpandedDepts((prev) => ({ ...prev, [deptId]: !prev[deptId] }));
-  };
-
-  const toggleProjectAccordion = (projId: string) => {
-    setExpandedProjects((prev) => ({ ...prev, [projId]: !prev[projId] }));
-  };
-
-  const openEmployeeProfile = async (empId: string) => {
-    setSelectedEmployeeId(empId);
-    try {
-      const res = await fetch(`/api/employees/${empId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setEmployeeProfile(data.employee);
-      }
-    } catch (err) {
-      console.error("Error fetching employee profile:", err);
-    }
-  };
-
-  const handleAddEmployee = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch("/api/employees", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newEmployee),
-      });
-      if (res.ok) {
-        setIsAddEmployeeModalOpen(false);
-        setNewEmployee({
-          name: "",
-          email: "",
-          title: "",
-          role: "EMPLOYEE",
-          departmentId: user.departmentId || "",
-          password: "password123",
-        });
-        fetchData();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to add employee");
-      }
-    } catch (err) {
-      console.error("Add employee error:", err);
-    }
-  };
-
-  const CORE_TEAM_EMAILS = [
-    "ceo@goperch.com",
-    "hod.sales@goperch.com",
-    "hod.electronics@goperch.com",
-    "hod.software@goperch.com",
-  ];
-
-  const handleDeleteEmployee = async (empId: string) => {
-    const targetEmp = allUsersList.find((u) => u.id === empId) || (employeeProfile?.id === empId ? employeeProfile : null);
-    if (targetEmp && CORE_TEAM_EMAILS.includes(targetEmp.email.toLowerCase())) {
-      alert("Forbidden: Core leadership team members (Ryan Bantu, Jonathan Jaladi, Vikram, Prasanna) are protected and cannot be deleted.");
-      return;
-    }
-
-    if (!confirm("Are you sure you want to delete/archive this employee? All data will be backed up safely and can be restored.")) {
-      return;
-    }
-    try {
-      const res = await fetch(`/api/employees/${empId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        if (selectedEmployeeId === empId) setSelectedEmployeeId(null);
-        fetchData();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to archive employee");
-      }
-    } catch (err) {
-      console.error("Delete employee error:", err);
-    }
-  };
-
-  const handleRestoreEmployee = async (empId: string) => {
-    try {
-      const res = await fetch(`/api/employees/${empId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isArchived: false }),
-      });
-      if (res.ok) {
-        fetchData();
-      }
-    } catch (err) {
-      console.error("Restore employee error:", err);
-    }
-  };
-
-  const handlePullToTopFocus = async (projectId: string, targetState?: boolean) => {
-    const targetProj = projects.find((p) => p.id === projectId);
-    if (!targetProj) return;
-
-    const nextState = targetState !== undefined ? targetState : !targetProj.isTopFocus;
-
-    if (nextState) {
-      const currentTopProjects = projects.filter((p) => p.isTopFocus);
-      if (currentTopProjects.length >= 3) {
-        const projToDemote = currentTopProjects[currentTopProjects.length - 1];
-        if (projToDemote.id !== projectId) {
-          await fetch("/api/projects", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: projToDemote.id, isTopFocus: false }),
-          });
+    if (!activeChannelId) return;
+    const fetchChat = async () => {
+      try {
+        const res = await fetch(`/api/chat/messages?channelId=${activeChannelId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setChatMessages(data.messages || []);
         }
+      } catch (err) {
+        console.error("Fetch chat error:", err);
       }
-    }
+    };
+    fetchChat();
+  }, [activeChannelId]);
 
-    try {
-      const res = await fetch("/api/projects", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: projectId, isTopFocus: nextState }),
+  // Priority sorting for HODs
+  const getSortedDepartments = () => {
+    if (user.role === "HOD" && user.departmentId) {
+      return [...departments].sort((a, b) => {
+        if (a.id === user.departmentId) return -1;
+        if (b.id === user.departmentId) return 1;
+        return 0;
       });
-      if (res.ok) {
-        fetchData();
-      }
-    } catch (err) {
-      console.error("Pull to top focus error:", err);
     }
+    return departments;
   };
 
-  const handleCreateProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newProject.isTopFocus) {
-      const currentTopProjects = projects.filter((p) => p.isTopFocus);
-      if (currentTopProjects.length >= 3) {
-        const projToDemote = currentTopProjects[currentTopProjects.length - 1];
-        await fetch("/api/projects", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: projToDemote.id, isTopFocus: false }),
-        });
-      }
+  // Filter tasks for Employee role scoping
+  const filteredTasks = tasks.filter((t) => {
+    if (user.role === "EMPLOYEE") {
+      return t.assignedTo?.id === user.id || t.department?.name === user.department?.name;
     }
-    try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newProject),
-      });
-      if (res.ok) {
-        setIsProjectModalOpen(false);
-        setNewProject({
-          title: "",
-          description: "",
-          departmentId: user.departmentId || "",
-          isTopFocus: false,
-          progress: 0,
-          targetDate: "",
-        });
-        fetchData();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    return true;
+  });
 
-  const handlePostProjectNote = async (projectId: string) => {
-    const content = projectNoteInput[projectId];
-    if (!content || !content.trim()) return;
+  // Kanban Columns
+  const todoTasks = filteredTasks.filter((t) => t.status === "TODO");
+  const inProgressTasks = filteredTasks.filter((t) => t.status === "IN_PROGRESS");
+  const inReviewTasks = filteredTasks.filter((t) => t.status === "IN_REVIEW");
+  const completedTasks = filteredTasks.filter((t) => t.status === "COMPLETED");
 
-    try {
-      const res = await fetch(`/api/projects/${projectId}/notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: content.trim() }),
-      });
-      if (res.ok) {
-        setProjectNoteInput((prev) => ({ ...prev, [projectId]: "" }));
-        fetchData();
-      }
-    } catch (err) {
-      console.error("Post project note error:", err);
-    }
-  };
+  // CEO Top 3 Priorities
+  const topFocusProjects = projects.filter((p) => p.isTopFocus);
 
-  const handleUpdateProjectProgress = async (projectId: string, newProgress: number) => {
-    try {
-      const res = await fetch("/api/projects", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: projectId, progress: newProgress }),
-      });
-      if (res.ok) {
-        fetchData();
-      }
-    } catch (err) {
-      console.error("Update project progress error:", err);
-    }
-  };
-
-  const handleCreateTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newTask),
-      });
-      if (res.ok) {
-        setIsTaskModalOpen(false);
-        setNewTask({ title: "", description: "", priority: "MEDIUM", assignedToId: "", departmentId: user.departmentId || "", milestoneId: "", projectId: "" });
-        fetchData();
-        if (selectedEmployeeId) openEmployeeProfile(selectedEmployeeId);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
+  // Status Change Handler
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: Task["status"]) => {
     try {
       const res = await fetch("/api/tasks", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: taskId, status: newStatus }),
       });
+
       if (res.ok) {
-        fetchData();
-        if (selectedEmployeeId) openEmployeeProfile(selectedEmployeeId);
+        const data = await res.json();
+        setTasks((prev) => prev.map((t) => (t.id === taskId ? data.task : t)));
+        if (selectedTaskTicket && selectedTaskTicket.id === taskId) {
+          setSelectedTaskTicket(data.task);
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("Update task status error:", err);
     }
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  // Submit Comment Handler
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageInput.trim()) return;
+    if (!selectedTaskTicket || !newCommentInput.trim()) return;
+    setIsSubmittingComment(true);
 
     try {
-      const payload: any = { content: messageInput.trim() };
-      if (selectedChannelId) payload.channelId = selectedChannelId;
-      if (selectedDmUser) payload.recipientId = selectedDmUser.id;
-
-      const res = await fetch("/api/chat/messages", {
+      const res = await fetch(`/api/tasks/${selectedTaskTicket.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ content: newCommentInput }),
       });
 
       if (res.ok) {
-        setMessageInput("");
-        fetchChatMessages();
+        const data = await res.json();
+        const newComments = [...(selectedTaskTicket.comments || []), data.comment];
+        const updatedTicket = { ...selectedTaskTicket, comments: newComments };
+
+        setSelectedTaskTicket(updatedTicket);
+        setTasks((prev) => prev.map((t) => (t.id === selectedTaskTicket.id ? updatedTicket : t)));
+        setNewCommentInput("");
       }
     } catch (err) {
-      console.error(err);
+      console.error("Add comment error:", err);
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
-  const totalTasksCount = tasks.length;
-  const completedTasksCount = tasks.filter((t) => t.status === "COMPLETED").length;
-  const inProgressTasksCount = tasks.filter((t) => t.status === "IN_PROGRESS").length;
-  const openHurdlesCount = hurdles.filter((h) => h.status === "OPEN").length;
-  const overallCompletionPct = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
+  // Create Task Handler
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskTitle.trim()) return;
 
-  const topFocusProjects = projects.filter((p) => p.isTopFocus);
-  const allUsersList = departments.flatMap((d) => d.users).filter((u) => !u.isArchived);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTaskTitle,
+          description: newTaskDesc,
+          priority: newTaskPriority,
+          dueDate: newTaskDueDate || null,
+          assignedToId: newTaskAssigneeId || null,
+          projectId: newTaskProjectId || null,
+        }),
+      });
 
-  const filteredTasks = tasks.filter((t) => {
-    if (user.role === "EMPLOYEE") {
-      const isDeptMatch = t.department?.name?.toLowerCase() === user.department?.name?.toLowerCase();
-      const isAssignedToMe = t.assignedTo?.id === user.id;
-      if (!isDeptMatch && !isAssignedToMe) return false;
-    } else if (selectedDeptFilter !== "ALL" && t.department?.name !== departments.find((d) => d.id === selectedDeptFilter)?.name) {
-      return false;
+      if (res.ok) {
+        const data = await res.json();
+        setTasks((prev) => [data.task, ...prev]);
+        setShowCreateTaskModal(false);
+        setNewTaskTitle("");
+        setNewTaskDesc("");
+        setNewTaskDueDate("");
+      }
+    } catch (err) {
+      console.error("Create task error:", err);
     }
-    if (selectedStatusFilter !== "ALL" && t.status !== selectedStatusFilter) {
-      return false;
+  };
+
+  // Create Priority Card Handler (CEO)
+  const handleCreatePriorityCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPriorityTitle.trim()) return;
+
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newPriorityTitle,
+          description: newPriorityDesc,
+          isTopFocus: true,
+          departmentId: newPriorityDept || user.departmentId,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setProjects((prev) => [data.project, ...prev]);
+        setShowCreatePriorityModal(false);
+        setNewPriorityTitle("");
+        setNewPriorityDesc("");
+      }
+    } catch (err) {
+      console.error("Create priority project error:", err);
     }
-    return true;
-  });
+  };
 
-  const renderTaskCard = (task: Task) => {
-    return (
-      <div
-        key={task.id}
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.setData("taskId", task.id);
-          e.dataTransfer.setData("type", "task");
-        }}
-        className="bg-white p-3.5 rounded-xl border border-slate-300 text-xs space-y-2 shadow-xs cursor-grab active:cursor-grabbing hover:border-blue-500 hover:shadow-md transition"
-      >
-        <div className="flex justify-between items-start gap-2">
-          <div className="flex items-start gap-1.5 font-bold text-slate-900 leading-tight">
-            <span className="text-slate-400 font-black cursor-grab" title="Drag Task Card">⠿</span>
-            <span>{task.title}</span>
-          </div>
-          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
-            task.status === "COMPLETED" ? "bg-emerald-100 text-emerald-900 border-emerald-300" :
-            task.status === "IN_REVIEW" ? "bg-amber-100 text-amber-900 border-amber-300" :
-            task.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-900 border-blue-300" : "bg-slate-100 text-slate-800 border-slate-300"
-          }`}>
-            {task.status.replace("_", " ")}
-          </span>
-        </div>
-        
-        <div className="flex items-center justify-between text-[11px] text-slate-700 font-medium pt-0.5">
-          <span>Assigned: <strong className="text-slate-900 font-extrabold">{task.assignedTo?.name || "Unassigned"}</strong></span>
-          {task.project && (
-            <span className="font-extrabold text-blue-900 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-md text-[10px]">
-              📁 {task.project.title}
-            </span>
-          )}
-        </div>
+  // Send Chat Message
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeChannelId || !newMessageContent.trim()) return;
 
-        {/* Push & Pull 1-Click Status Controls */}
-        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-200">
-          {task.status === "IN_PROGRESS" && (
-            <button
-              onClick={() => handleUpdateTaskStatus(task.id, "TODO")}
-              className="px-2 py-1 text-[10px] font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors"
-            >
-              ← Pull to TODO
-            </button>
-          )}
-          {task.status === "IN_REVIEW" && (
-            <button
-              onClick={() => handleUpdateTaskStatus(task.id, "IN_PROGRESS")}
-              className="px-2 py-1 text-[10px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-md transition-colors"
-            >
-              ← Pull to IN PROGRESS
-            </button>
-          )}
-          {task.status === "COMPLETED" && (
-            <button
-              onClick={() => handleUpdateTaskStatus(task.id, "IN_REVIEW")}
-              className="px-2 py-1 text-[10px] font-bold text-emerald-900 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-md transition-colors"
-            >
-              ← Re-open
-            </button>
-          )}
+    try {
+      const res = await fetch("/api/chat/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: newMessageContent,
+          channelId: activeChannelId,
+        }),
+      });
 
-          {task.status === "TODO" && (
-            <button
-              onClick={() => handleUpdateTaskStatus(task.id, "IN_PROGRESS")}
-              className="px-2.5 py-1 text-[10px] font-extrabold text-white bg-blue-600 hover:bg-blue-700 border border-blue-700 rounded-md transition-colors shadow-2xs ml-auto"
-            >
-              Push to IN PROGRESS →
-            </button>
-          )}
-          {task.status === "IN_PROGRESS" && (
-            <button
-              onClick={() => handleUpdateTaskStatus(task.id, "IN_REVIEW")}
-              className="px-2.5 py-1 text-[10px] font-extrabold text-white bg-amber-600 hover:bg-amber-700 border border-amber-700 rounded-md transition-colors shadow-2xs ml-auto"
-            >
-              Push to IN REVIEW →
-            </button>
-          )}
-          {task.status === "IN_REVIEW" && (
-            <button
-              onClick={() => handleUpdateTaskStatus(task.id, "COMPLETED")}
-              className="px-2.5 py-1 text-[10px] font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 rounded-md transition-colors shadow-2xs ml-auto"
-            >
-              Push to COMPLETED ✓
-            </button>
-          )}
-        </div>
-      </div>
-    );
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages((prev) => [...prev, data.message]);
+        setNewMessageContent("");
+      }
+    } catch (err) {
+      console.error("Send message error:", err);
+    }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Clean Minimalist Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold text-blue-600">GoPerch Workspace</span>
-            {user.department && (
-              <span className="px-2.5 py-0.5 rounded-full bg-blue-100/80 text-blue-800 text-[10px] font-bold border border-blue-200 shadow-2xs flex items-center gap-1">
-                🎯 {user.department.name} Department Hub
-              </span>
-            )}
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            Hello, {user.name.split(" ")[0]} 👋
-            {user.role === "HOD" && (
-              <span className="text-xs font-bold px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full border border-amber-300 shadow-2xs">
-                👑 Head of {user.department?.name || "Department"}
-              </span>
-            )}
-          </h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">
-            {user.role === "CEO" && "Executive overview across Electronics, Software, Sales, and Leadership."}
-            {user.role === "HOD" && `Welcome to your ${user.department?.name || "Department"} Command Center. Operations & team priorities ranked on top.`}
-            {user.role === "EMPLOYEE" && `Your personal ${user.department?.name || "team"} workspace.`}
-          </p>
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          {(user.role === "CEO" || user.role === "HOD") && (
-            <select
-              value={selectedDeptFilter}
-              onChange={(e) => setSelectedDeptFilter(e.target.value)}
-              className="bg-white border border-blue-200 text-slate-800 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-blue-600 shadow-sm"
-            >
-              <option value="ALL">All Departments View</option>
-              {departments.map((d) => {
-                const isUserDept = d.id === user.departmentId || d.name.toLowerCase() === user.department?.name?.toLowerCase();
-                return (
-                  <option key={d.id} value={d.id}>
-                    {isUserDept ? `⭐ ${d.name} (My Department)` : d.name}
-                  </option>
-                );
-              })}
-            </select>
-          )}
-
-          {user.role !== "EMPLOYEE" && (
-            <button
-              onClick={() => setIsAddEmployeeModalOpen(true)}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-            >
-              + Add Employee
-            </button>
-          )}
-
-          <button
-            onClick={() => setIsProjectModalOpen(true)}
-            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-          >
-            + New Project
-          </button>
-
-          {user.role !== "EMPLOYEE" && (
-            <button
-              onClick={() => setIsTaskModalOpen(true)}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-            >
-              + Assign Task
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* CEO TOP 3 STRATEGIC FOCUS INTERACTIVE TRAY (VISIBLE TO ALL ROLES) */}
-      <div
-        onDragOver={(e) => {
-          if (user.role === "CEO") {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = "move";
-          }
-        }}
-        onDrop={(e) => {
-          if (user.role === "CEO") {
-            e.preventDefault();
-            const projId = e.dataTransfer.getData("text/plain");
-            if (projId) handlePullToTopFocus(projId, true);
-          }
-        }}
-        className="p-6 bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white rounded-3xl shadow-2xl border-2 border-dashed border-blue-400/40 hover:border-blue-300 transition-all space-y-4"
-      >
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-amber-400 text-slate-950 rounded-full uppercase tracking-wider">
-                Official Company Alignment
-              </span>
-              <h2 className="text-xl font-extrabold text-white tracking-tight">CEO Top 3 Strategic Priorities</h2>
+    <div className="space-y-8">
+      {/* 👑 CEO TOP 3 STRATEGIC PRIORITIES TRAY */}
+      <section className="bg-gradient-to-r from-slate-900 via-[#0f172a] to-slate-900 border border-purple-500/30 rounded-3xl p-6 shadow-2xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+              <Crown className="w-6 h-6" />
             </div>
-            <p className="text-xs text-blue-200/90 mt-1">
-              🎯 Company-wide strategic focus set by CEO Ryan Bantu. Visible to all departments.
-              {user.role === "CEO" && " Create custom priority cards or drag/pull project cards into slots below."}
-            </p>
+            <div>
+              <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                CEO Top 3 Strategic Priorities
+                <span className="text-xs bg-purple-500/20 text-purple-300 font-bold px-2.5 py-0.5 rounded-full border border-purple-500/30">
+                  Visible Company-Wide
+                </span>
+              </h2>
+              <p className="text-xs text-slate-400 font-medium">
+                Executive focus areas directed by Ryan Bantu (CEO) across all engineering and revenue departments.
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto">
-            {user.role === "CEO" && (
-              <button
-                onClick={() => {
-                  setNewProject({
-                    title: "",
-                    description: "",
-                    departmentId: user.departmentId || "",
-                    isTopFocus: true,
-                    progress: 0,
-                    targetDate: "",
-                  });
-                  setIsProjectModalOpen(true);
-                }}
-                className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs transition shadow-md flex items-center gap-1"
-              >
-                ✨ + Create CEO Priority Card
-              </button>
-            )}
-            <span className="text-xs font-semibold px-3 py-1.5 bg-white/10 rounded-xl text-blue-200 border border-white/10">
-              {topFocusProjects.length} / 3 Focus Slots Active
-            </span>
-          </div>
+          {user.role === "CEO" && (
+            <button
+              onClick={() => {
+                setPrioritySlotIndex(topFocusProjects.length);
+                setShowCreatePriorityModal(true);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl transition shadow-lg shadow-purple-500/20 flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              + Create CEO Priority Card
+            </button>
+          )}
         </div>
 
+        {/* 3 Grid Slots */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[0, 1, 2].map((slotIdx) => {
             const proj = topFocusProjects[slotIdx];
-            if (proj) {
-              return (
-                <div
-                  key={proj.id}
-                  draggable={user.role === "CEO"}
-                  onDragStart={(e) => {
-                    if (user.role === "CEO") e.dataTransfer.setData("text/plain", proj.id);
-                  }}
-                  className={`p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-amber-400/50 shadow-lg flex flex-col justify-between space-y-3 relative transition ${
-                    user.role === "CEO" ? "cursor-grab active:cursor-grabbing hover:border-amber-300" : ""
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-mono">
-                        Priority #{slotIdx + 1}
+            return (
+              <div
+                key={slotIdx}
+                className={`p-5 rounded-2xl border transition relative flex flex-col justify-between min-h-[160px] ${
+                  proj
+                    ? "bg-[#0f172a]/90 border-purple-500/40 hover:border-purple-400 shadow-xl"
+                    : "bg-slate-900/40 border-dashed border-slate-800 flex items-center justify-center text-center cursor-pointer hover:border-slate-700"
+                }`}
+                onClick={() => {
+                  if (!proj && user.role === "CEO") {
+                    setPrioritySlotIndex(slotIdx);
+                    setShowCreatePriorityModal(true);
+                  }
+                }}
+              >
+                {proj ? (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-md border border-purple-500/20">
+                          Priority #{slotIdx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                          <Flame className="w-3.5 h-3.5 text-emerald-400" />
+                          {proj.progress}% Done
+                        </span>
+                      </div>
+
+                      <h3 className="font-extrabold text-base text-white leading-snug">{proj.title}</h3>
+                      <p className="text-xs text-slate-400 line-clamp-2">{proj.description}</p>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                      <span className="font-bold text-slate-300">
+                        {proj.department?.name || "Cross-Departmental"}
                       </span>
-                      {user.role === "CEO" && (
-                        <button
-                          onClick={() => handlePullToTopFocus(proj.id, false)}
-                          className="text-[11px] font-semibold text-rose-300 hover:text-rose-100 hover:underline"
-                          title="Remove from CEO Top 3 Focus"
-                        >
-                          ✕ Remove
-                        </button>
-                      )}
+                      <span className="text-purple-300 font-semibold">
+                        Owner: {proj.createdBy?.name || "Ryan Bantu"}
+                      </span>
                     </div>
-                    <h3 className="font-bold text-white text-sm leading-snug">{proj.title}</h3>
-                    <p className="text-xs text-slate-300/90 line-clamp-2 mt-1">{proj.description}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <div className="flex justify-between items-center text-xs mb-1 font-semibold text-slate-200">
-                        <span>Progress</span>
-                        <span className="text-amber-300 font-bold">{proj.progress}%</span>
-                      </div>
-                      <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-amber-400 via-blue-400 to-emerald-400 h-full rounded-full transition-all duration-500"
-                          style={{ width: `${proj.progress}%` }}
-                        />
-                      </div>
+                  </>
+                ) : (
+                  <div className="space-y-1.5 p-4 text-center">
+                    <Crown className="w-6 h-6 text-slate-600 mx-auto" />
+                    <div className="text-xs font-bold text-slate-400">Priority Slot #{slotIdx + 1}</div>
+                    <div className="text-[11px] text-slate-500">
+                      {user.role === "CEO" ? "Click to set strategic priority" : "Slot reserved by CEO"}
                     </div>
-
-                    {proj.notes && proj.notes.length > 0 && (
-                      <div className="p-2.5 bg-black/25 rounded-xl text-xs text-slate-200 border border-white/5">
-                        <span className="text-[10px] uppercase font-bold text-blue-300 block mb-0.5">Latest Update</span>
-                        <p className="italic text-slate-300 text-[11px] line-clamp-1">"{proj.notes[0].content}"</p>
-                      </div>
-                    )}
                   </div>
-                </div>
-              );
-            } else {
-              return (
-                <div
-                  key={`empty-slot-${slotIdx}`}
-                  onClick={() => {
-                    if (user.role === "CEO") {
-                      setNewProject({
-                        title: "",
-                        description: "",
-                        departmentId: user.departmentId || "",
-                        isTopFocus: true,
-                        progress: 0,
-                        targetDate: "",
-                      });
-                      setIsProjectModalOpen(true);
-                    }
-                  }}
-                  className={`p-6 bg-white/5 rounded-2xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center text-center text-slate-400 space-y-2 min-h-[160px] transition ${
-                    user.role === "CEO" ? "cursor-pointer hover:border-amber-400/80 hover:bg-white/10" : ""
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-slate-300 text-sm">
-                    +{slotIdx + 1}
-                  </div>
-                  <div className="text-xs font-semibold text-slate-300">Priority #{slotIdx + 1} Slot Empty</div>
-                  <div className="text-[11px] text-slate-400">
-                    {user.role === "CEO"
-                      ? "Click to +Create a CEO Priority Card or drag/pull a project here"
-                      : "Awaiting CEO Strategic Allocation"}
-                  </div>
-                </div>
-              );
-            }
+                )}
+              </div>
+            );
           })}
         </div>
+      </section>
+
+      {/* 📌 NAVIGATION TABS & FILTERS */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
+          <button
+            onClick={() => setActiveTab("kanban")}
+            className={`px-4 py-2 text-xs font-black rounded-xl transition flex items-center gap-2 ${
+              activeTab === "kanban"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+            }`}
+          >
+            <Kanban className="w-4 h-4" />
+            Kanban Tickets ({filteredTasks.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("projects")}
+            className={`px-4 py-2 text-xs font-black rounded-xl transition flex items-center gap-2 ${
+              activeTab === "projects"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+            }`}
+          >
+            <Briefcase className="w-4 h-4" />
+            Projects ({projects.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("milestones")}
+            className={`px-4 py-2 text-xs font-black rounded-xl transition flex items-center gap-2 ${
+              activeTab === "milestones"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+            }`}
+          >
+            <Target className="w-4 h-4" />
+            Milestones ({milestones.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("team")}
+            className={`px-4 py-2 text-xs font-black rounded-xl transition flex items-center gap-2 ${
+              activeTab === "team"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Directory ({teamMembers.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("skills")}
+            className={`px-4 py-2 text-xs font-black rounded-xl transition flex items-center gap-2 ${
+              activeTab === "skills"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+            }`}
+          >
+            <GraduationCap className="w-4 h-4" />
+            Skills ({skills.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("hurdles")}
+            className={`px-4 py-2 text-xs font-black rounded-xl transition flex items-center gap-2 ${
+              activeTab === "hurdles"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+            }`}
+          >
+            <HelpCircle className="w-4 h-4" />
+            Hurdles ({hurdles.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("chat")}
+            className={`px-4 py-2 text-xs font-black rounded-xl transition flex items-center gap-2 ${
+              activeTab === "chat"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                : "bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Team Chat
+          </button>
+        </div>
+
+        {/* HOD / CEO Department Filter dropdown */}
+        <div className="flex items-center gap-2">
+          {user.role !== "EMPLOYEE" && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-slate-400" />
+              <select
+                value={departmentIdFilter}
+                onChange={(e) => setDepartmentIdFilter(e.target.value)}
+                className="bg-slate-900 text-xs font-extrabold text-white border border-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+              >
+                <option value="ALL">All Departments</option>
+                {getSortedDepartments().map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {user.departmentId === d.id ? `⭐ ${d.name} (Your Dept)` : d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <button
+            onClick={() => setShowCreateTaskModal(true)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl transition shadow-lg shadow-blue-500/20 flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            Assign Ticket
+          </button>
+        </div>
       </div>
 
-      {/* Clean KPI Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="goperch-card p-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-medium text-slate-400">Total Projects</div>
-            <div className="text-xl font-bold text-slate-900">{projects.length} active</div>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
-            🎯
-          </div>
-        </div>
-
-        <div className="goperch-card p-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-medium text-slate-400">In Progress Tasks</div>
-            <div className="text-xl font-bold text-slate-900">{inProgressTasksCount} tasks</div>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
-            ⚡
-          </div>
-        </div>
-
-        <div className="goperch-card p-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-medium text-slate-400">Blockers & Hurdles</div>
-            <div className="text-xl font-bold text-amber-600">{openHurdlesCount} open</div>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs">
-            ⚠️
-          </div>
-        </div>
-
-        <div className="goperch-card p-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-medium text-slate-400">Completion Rate</div>
-            <div className="text-xl font-bold text-slate-900">{overallCompletionPct}%</div>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">
-            📊
-          </div>
-        </div>
-      </div>
-
-      {/* Minimalist Tab Navigation */}
-      <div className="flex border-b border-slate-200/80 gap-6 text-xs font-semibold overflow-x-auto">
-        <button
-          onClick={() => setActiveTab("overview")}
-          className={`pb-3 transition border-b-2 whitespace-nowrap ${activeTab === "overview" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setActiveTab("projects")}
-          className={`pb-3 transition border-b-2 flex items-center gap-1.5 whitespace-nowrap ${activeTab === "projects" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
-        >
-          Projects & Notes ({projects.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("tasks")}
-          className={`pb-3 transition border-b-2 flex items-center gap-1.5 whitespace-nowrap ${activeTab === "tasks" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
-        >
-          Task Board ({tasks.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("chat")}
-          className={`pb-3 transition border-b-2 flex items-center gap-1.5 whitespace-nowrap ${activeTab === "chat" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
-        >
-          Chat & Channels
-        </button>
-        <button
-          onClick={() => setActiveTab("directory")}
-          className={`pb-3 transition border-b-2 flex items-center gap-1.5 whitespace-nowrap ${activeTab === "directory" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
-        >
-          Team Directory ({allUsersList.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("skills")}
-          className={`pb-3 transition border-b-2 flex items-center gap-1.5 whitespace-nowrap ${activeTab === "skills" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
-        >
-          Skills ({userSkills.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("hurdles")}
-          className={`pb-3 transition border-b-2 flex items-center gap-1.5 whitespace-nowrap ${activeTab === "hurdles" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-900"}`}
-        >
-          Hurdles & Blockers ({openHurdlesCount})
-        </button>
-      </div>
-
-      {/* TAB 1: OVERVIEW */}
-      {activeTab === "overview" && (
-        <div className="space-y-4">
-          <div className="space-y-3">
-            {departments
-              .filter((d) => {
-                if (user.role === "EMPLOYEE") {
-                  return d.id === user.departmentId || d.name.toLowerCase() === user.department?.name?.toLowerCase();
-                }
-                return selectedDeptFilter === "ALL" || d.id === selectedDeptFilter;
-              })
-              .map((dept) => {
-                const isExpanded = !!expandedDepts[dept.id];
-                const deptTasks = tasks.filter((t) => t.department?.name === dept.name);
-                const completedCount = deptTasks.filter((t) => t.status === "COMPLETED").length;
-                const totalCount = deptTasks.length;
-                const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-                const deptHurdlesCount = hurdles.filter((h) => h.askedBy.department?.name === dept.name && h.status === "OPEN").length;
-                const deptProjects = projects.filter((p) => p.department?.name === dept.name);
-
-                return (
-                  <div key={dept.id} className="goperch-card overflow-hidden transition-all">
-                    {/* Header */}
-                    <div
-                      onClick={() => toggleDeptAccordion(dept.id)}
-                      className="p-5 cursor-pointer hover:bg-slate-50/50 transition flex items-center justify-between select-none"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 font-bold text-sm flex items-center justify-center">
-                          {dept.code.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-base font-bold text-slate-900">{dept.name} Department</h3>
-                            {(dept.id === user.departmentId || dept.name.toLowerCase() === user.department?.name?.toLowerCase()) && (
-                              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-blue-600 text-white shadow-2xs flex items-center gap-1">
-                                ⭐ Your Department
-                              </span>
-                            )}
-                            {deptHurdlesCount > 0 && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                {deptHurdlesCount} Blocker
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-slate-400 font-normal">{dept.description}</div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 text-xs">
-                        <div className="text-right hidden sm:block">
-                          <span className="font-bold text-blue-600">{pct}% Completed</span>
-                          <span className="text-slate-400 font-normal ml-2">({completedCount}/{totalCount} tasks)</span>
-                        </div>
-                        <div className="text-slate-400 text-xs font-bold">
-                          {isExpanded ? "▲" : "▼"}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Expanded Content */}
-                    {isExpanded && (
-                      <div className="p-5 bg-slate-50/50 border-t border-slate-100 space-y-4">
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs text-slate-500 font-medium">
-                            <span>Department Task Progress</span>
-                            <span className="font-bold text-slate-900">{pct}%</span>
-                          </div>
-                          <div className="w-full bg-slate-200/60 h-2 rounded-full overflow-hidden">
-                            <div className="bg-blue-600 h-full rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-
-                        {/* Projects in Dept */}
-                        {deptProjects.length > 0 && (
-                          <div className="space-y-1.5">
-                            <div className="text-[11px] font-bold uppercase text-slate-400 tracking-wider">Active Department Projects</div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {deptProjects.map((p) => (
-                                <div
-                                  key={p.id}
-                                  draggable
-                                  onDragStart={(e) => e.dataTransfer.setData("text/plain", p.id)}
-                                  className="bg-white p-3 rounded-xl border border-slate-200/70 text-xs space-y-1.5 shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-400 transition"
-                                >
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-semibold text-slate-900">{p.title}</span>
-                                    <span className="font-bold text-blue-600 text-[11px]">{p.progress}%</span>
-                                  </div>
-                                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div className="bg-blue-600 h-full rounded-full" style={{ width: `${p.progress}%` }} />
-                                  </div>
-                                  <div className="flex justify-between items-center pt-1 border-t border-slate-100">
-                                    <span className="text-[10px] text-slate-400">⠿ Drag to Top 3</span>
-                                    <button
-                                      onClick={() => handlePullToTopFocus(p.id)}
-                                      className={`px-2 py-0.5 rounded text-[10px] font-semibold transition ${
-                                        p.isTopFocus ? "bg-amber-100 text-amber-800" : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                      }`}
-                                    >
-                                      {p.isTopFocus ? "⭐ In Top 3" : "📥 Pull into Top 3"}
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Tasks */}
-                        <div className="space-y-1.5">
-                          <div className="text-[11px] font-bold uppercase text-slate-400 tracking-wider">Active Tasks (Draggable Cards & Push/Pull)</div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {deptTasks.map((t) => renderTaskCard(t))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: PROJECTS & NOTES */}
-      {activeTab === "projects" && (
-        <div className="space-y-4">
+      {/* 🎯 TAB 1: KANBAN BOARD WITH INTERACTIVE TICKET CARDS */}
+      {activeTab === "kanban" && (
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-slate-900">All Company & Department Projects</h2>
-              <p className="text-xs text-slate-500">Drag any card up to the CEO Top 3 Strategic Priorities tray or click "📥 Pull into Top 3".</p>
+              <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+                <Kanban className="w-5 h-5 text-blue-400" />
+                Department Task Ticket Board
+              </h3>
+              <p className="text-xs text-slate-400">
+                Click any ticket to view details, update status (Picked Up, In Review, Completed), or discuss comments with managers.
+              </p>
             </div>
-            <button
-              onClick={() => setIsProjectModalOpen(true)}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition"
-            >
-              + Add Project
-            </button>
           </div>
 
-          <div className="space-y-3">
-            {projects
-              .filter((p) => {
-                if (user.role === "EMPLOYEE") {
-                  return !p.department || p.department?.id === user.departmentId || p.department?.name?.toLowerCase() === user.department?.name?.toLowerCase();
-                }
-                return selectedDeptFilter === "ALL" || p.department?.id === selectedDeptFilter;
-              })
-              .map((proj) => {
-                const isExpanded = !!expandedProjects[proj.id];
-                const projTasks = proj.tasks || [];
-                const projNotes = proj.notes || [];
+          {/* 4 Kanban Columns */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+            {/* COLUMN 1: TODO */}
+            <div className="bg-[#0f172a]/70 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <div className="flex items-center gap-2 text-xs font-black text-slate-300">
+                  <CircleDashed className="w-4 h-4 text-slate-400" />
+                  TO DO / BACKLOG
+                </div>
+                <span className="text-xs font-extrabold bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full">
+                  {todoTasks.length}
+                </span>
+              </div>
 
-                return (
-                  <div
-                    key={proj.id}
-                    draggable
-                    onDragStart={(e) => e.dataTransfer.setData("text/plain", proj.id)}
-                    className={`goperch-card overflow-hidden transition-all border-2 ${
-                      proj.isTopFocus ? "border-amber-400/80 bg-amber-50/10" : "border-slate-200/80 hover:border-blue-400"
-                    }`}
-                  >
-                    {/* Project Card Header */}
-                    <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="cursor-grab active:cursor-grabbing text-slate-400 font-bold" title="Drag Project Card">⠿</span>
-                          <span className="font-bold text-slate-900 text-base">{proj.title}</span>
-                          {proj.isTopFocus && (
-                            <span className="px-2 py-0.5 text-[10px] font-extrabold bg-amber-400 text-slate-950 rounded-full uppercase tracking-wider">
-                              ⭐ CEO Top Focus Priority
-                            </span>
-                          )}
-                          <span className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-700 rounded-full">
-                            {proj.department?.name || "Company-wide"}
-                          </span>
-                        </div>
-                        {proj.description && <p className="text-xs text-slate-500">{proj.description}</p>}
-                      </div>
-
-                      {/* Controls & Progress */}
-                      <div className="flex items-center gap-4">
-                        <div className="w-36 space-y-1">
-                          <div className="flex justify-between text-xs font-semibold text-slate-700">
-                            <span>Progress</span>
-                            <span className="text-blue-600 font-bold">{proj.progress}%</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={proj.progress}
-                            onChange={(e) => handleUpdateProjectProgress(proj.id, parseInt(e.target.value))}
-                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                          />
-                        </div>
-
-                        <button
-                          onClick={() => handlePullToTopFocus(proj.id)}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition shadow-sm ${
-                            proj.isTopFocus
-                              ? "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200"
-                              : "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+              <div className="space-y-3">
+                {todoTasks.length === 0 ? (
+                  <div className="text-slate-500 text-xs text-center py-6 border border-dashed border-slate-800 rounded-xl">
+                    No tickets in To Do
+                  </div>
+                ) : (
+                  todoTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      onClick={() => setSelectedTaskTicket(task)}
+                      className="bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-blue-500/50 p-4 rounded-xl space-y-3 cursor-pointer transition shadow-lg group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                          {task.department.name}
+                        </span>
+                        <span
+                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                            task.priority === "URGENT"
+                              ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                              : task.priority === "HIGH"
+                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                              : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
                           }`}
                         >
-                          {proj.isTopFocus ? "★ In Top 3 (Pull Out)" : "📥 Pull into Top 3"}
-                        </button>
+                          {task.priority}
+                        </span>
+                      </div>
 
+                      <h4 className="font-extrabold text-sm text-white group-hover:text-blue-400 transition leading-snug">
+                        {task.title}
+                      </h4>
+
+                      {task.description && (
+                        <p className="text-xs text-slate-400 line-clamp-2">{task.description}</p>
+                      )}
+
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                        <div className="flex items-center gap-1 font-medium text-slate-300">
+                          <UserCheck className="w-3.5 h-3.5 text-blue-400" />
+                          {task.assignedTo?.name || "Unassigned"}
+                        </div>
+                        <div className="flex items-center gap-1 text-slate-400">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          {task.comments?.length || 0}
+                        </div>
+                      </div>
+
+                      {/* Quick Move Action */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUpdateTaskStatus(task.id, "IN_PROGRESS");
+                        }}
+                        className="w-full py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white font-extrabold text-[11px] rounded-lg transition border border-blue-500/30 flex items-center justify-center gap-1"
+                      >
+                        ⚡ Pick Up Ticket (In Progress)
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* COLUMN 2: IN_PROGRESS */}
+            <div className="bg-[#0f172a]/70 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <div className="flex items-center gap-2 text-xs font-black text-blue-400">
+                  <Flame className="w-4 h-4 text-blue-400" />
+                  IN PROGRESS (PICKED UP)
+                </div>
+                <span className="text-xs font-extrabold bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">
+                  {inProgressTasks.length}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {inProgressTasks.length === 0 ? (
+                  <div className="text-slate-500 text-xs text-center py-6 border border-dashed border-slate-800 rounded-xl">
+                    No active tickets in progress
+                  </div>
+                ) : (
+                  inProgressTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      onClick={() => setSelectedTaskTicket(task)}
+                      className="bg-slate-900/90 hover:bg-slate-900 border border-blue-500/30 hover:border-blue-400 p-4 rounded-xl space-y-3 cursor-pointer transition shadow-lg group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                          {task.department.name}
+                        </span>
+                        <span className="text-[10px] font-extrabold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                          {task.priority}
+                        </span>
+                      </div>
+
+                      <h4 className="font-extrabold text-sm text-white group-hover:text-blue-400 transition leading-snug">
+                        {task.title}
+                      </h4>
+
+                      {task.description && (
+                        <p className="text-xs text-slate-400 line-clamp-2">{task.description}</p>
+                      )}
+
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                        <div className="flex items-center gap-1 font-medium text-slate-300">
+                          <UserCheck className="w-3.5 h-3.5 text-blue-400" />
+                          {task.assignedTo?.name || "Unassigned"}
+                        </div>
+                        <div className="flex items-center gap-1 text-slate-400">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          {task.comments?.length || 0}
+                        </div>
+                      </div>
+
+                      {/* Quick Shift Controls */}
+                      <div className="flex items-center gap-1.5">
                         <button
-                          onClick={() => toggleProjectAccordion(proj.id)}
-                          className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUpdateTaskStatus(task.id, "IN_REVIEW");
+                          }}
+                          className="flex-1 py-1.5 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-white font-extrabold text-[11px] rounded-lg transition border border-amber-500/30 flex items-center justify-center gap-1"
                         >
-                          {isExpanded ? "Collapse ▲" : "View Tasks & Notes ▼"}
+                          Submit Review
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUpdateTaskStatus(task.id, "COMPLETED");
+                          }}
+                          className="py-1.5 px-2 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white font-extrabold text-[11px] rounded-lg transition border border-emerald-500/30"
+                          title="Mark Complete"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
+                  ))
+                )}
+              </div>
+            </div>
 
-                    {/* Accordion Content */}
-                    {isExpanded && (
-                      <div className="p-5 bg-slate-50/60 border-t border-slate-100 space-y-6">
-                        {/* Tasks inside this Project */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                              Tasks in this Project ({projTasks.length}) &bull; Draggable
-                            </span>
-                            <button
-                              onClick={() => {
-                                setNewTask((prev) => ({ ...prev, projectId: proj.id, departmentId: proj.department?.id || user.departmentId || "" }));
-                                setIsTaskModalOpen(true);
-                              }}
-                              className="text-xs font-semibold text-blue-600 hover:underline"
-                            >
-                              + Add Task to Project
-                            </button>
-                          </div>
+            {/* COLUMN 3: IN_REVIEW / BLOCKED */}
+            <div className="bg-[#0f172a]/70 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <div className="flex items-center gap-2 text-xs font-black text-amber-400">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  IN REVIEW / BLOCKED
+                </div>
+                <span className="text-xs font-extrabold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
+                  {inReviewTasks.length}
+                </span>
+              </div>
 
-                          {projTasks.length === 0 ? (
-                            <div className="text-xs text-slate-400 italic bg-white p-3 rounded-xl border border-slate-200/60">
-                              No tasks assigned to this project yet.
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {projTasks.map((t) => renderTaskCard(t))}
-                            </div>
-                          )}
+              <div className="space-y-3">
+                {inReviewTasks.length === 0 ? (
+                  <div className="text-slate-500 text-xs text-center py-6 border border-dashed border-slate-800 rounded-xl">
+                    No tickets in review
+                  </div>
+                ) : (
+                  inReviewTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      onClick={() => setSelectedTaskTicket(task)}
+                      className="bg-slate-900/90 hover:bg-slate-900 border border-amber-500/30 hover:border-amber-400 p-4 rounded-xl space-y-3 cursor-pointer transition shadow-lg group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          {task.department.name}
+                        </span>
+                        <span className="text-[10px] font-extrabold bg-red-500/20 text-red-300 px-2 py-0.5 rounded border border-red-500/30">
+                          {task.priority}
+                        </span>
+                      </div>
+
+                      <h4 className="font-extrabold text-sm text-white group-hover:text-amber-400 transition leading-snug">
+                        {task.title}
+                      </h4>
+
+                      {task.description && (
+                        <p className="text-xs text-slate-400 line-clamp-2">{task.description}</p>
+                      )}
+
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                        <div className="flex items-center gap-1 font-medium text-slate-300">
+                          <UserCheck className="w-3.5 h-3.5 text-amber-400" />
+                          {task.assignedTo?.name || "Unassigned"}
                         </div>
-
-                        {/* Project Notes & Updates */}
-                        <div className="space-y-3 pt-4 border-t border-slate-200/60">
-                          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                            Project Notes & Execution Log ({projNotes.length})
-                          </span>
-
-                          <div className="space-y-2">
-                            {projNotes.map((n) => (
-                              <div key={n.id} className="bg-white p-3 rounded-xl border border-slate-200/70 text-xs space-y-1">
-                                <div className="flex justify-between items-center">
-                                  <span className="font-bold text-slate-900">{n.author.name} ({n.author.role})</span>
-                                  <span className="text-[10px] text-slate-400">
-                                    {new Date(n.createdAt).toLocaleDateString()} {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                </div>
-                                <p className="text-slate-700 leading-relaxed">{n.content}</p>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Post Note Form */}
-                          <div className="flex gap-2 pt-1">
-                            <input
-                              type="text"
-                              placeholder="Write a project note or update..."
-                              value={projectNoteInput[proj.id] || ""}
-                              onChange={(e) => setProjectNoteInput({ ...projectNoteInput, [proj.id]: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  handlePostProjectNote(proj.id);
-                                }
-                              }}
-                              className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600 shadow-sm"
-                            />
-                            <button
-                              onClick={() => handlePostProjectNote(proj.id)}
-                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition"
-                            >
-                              Post Update
-                            </button>
-                          </div>
+                        <div className="flex items-center gap-1 text-slate-400">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          {task.comments?.length || 0}
                         </div>
                       </div>
-                    )}
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUpdateTaskStatus(task.id, "COMPLETED");
+                        }}
+                        className="w-full py-1.5 bg-emerald-500/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-extrabold text-[11px] rounded-lg transition border border-emerald-500/30 flex items-center justify-center gap-1"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Approve & Mark Completed
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* COLUMN 4: COMPLETED */}
+            <div className="bg-[#0f172a]/70 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <div className="flex items-center gap-2 text-xs font-black text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  COMPLETED / DONE
+                </div>
+                <span className="text-xs font-extrabold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  {completedTasks.length}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {completedTasks.length === 0 ? (
+                  <div className="text-slate-500 text-xs text-center py-6 border border-dashed border-slate-800 rounded-xl">
+                    No completed tickets yet
                   </div>
-                );
-              })}
+                ) : (
+                  completedTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      onClick={() => setSelectedTaskTicket(task)}
+                      className="bg-slate-900/90 opacity-90 hover:opacity-100 border border-emerald-500/20 hover:border-emerald-400 p-4 rounded-xl space-y-3 cursor-pointer transition shadow-lg group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          {task.department.name}
+                        </span>
+                        <span className="text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">
+                          DONE
+                        </span>
+                      </div>
+
+                      <h4 className="font-extrabold text-sm text-slate-200 line-through group-hover:text-emerald-400 transition leading-snug">
+                        {task.title}
+                      </h4>
+
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                        <div className="flex items-center gap-1 font-medium text-slate-300">
+                          <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          {task.assignedTo?.name || "Unassigned"}
+                        </div>
+                        <div className="flex items-center gap-1 text-slate-400">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          {task.comments?.length || 0}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* TAB 3: SLACK CHAT */}
+      {/* 💼 TAB 2: PROJECTS VIEW */}
+      {activeTab === "projects" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+              <Briefcase className="w-5 h-5 text-blue-400" />
+              Company Projects & Telemetry
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {projects.map((proj) => (
+              <div key={proj.id} className="goperch-card p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md border border-blue-500/20">
+                    {proj.department?.name || "Global"}
+                  </span>
+                  <span className="text-xs font-bold text-slate-400">{proj.status}</span>
+                </div>
+
+                <div>
+                  <h4 className="text-base font-extrabold text-white">{proj.title}</h4>
+                  <p className="text-xs text-slate-400 mt-1">{proj.description}</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                    <span>Execution Progress</span>
+                    <span className="text-blue-400">{proj.progress}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500"
+                      style={{ width: `${proj.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                {proj.notes && proj.notes.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-slate-800 space-y-2 text-xs">
+                    <div className="font-extrabold text-slate-300">Recent Update Note:</div>
+                    <p className="text-slate-400 italic bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                      "{proj.notes[proj.notes.length - 1].content}"
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 🎯 TAB 3: MILESTONES VIEW */}
+      {activeTab === "milestones" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+              <Target className="w-5 h-5 text-blue-400" />
+              Strategic Department Milestones
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {milestones.map((ms) => (
+              <div key={ms.id} className="goperch-card p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">
+                    {ms.department.name}
+                  </span>
+                  <span className="text-xs font-bold text-slate-400">{ms.status}</span>
+                </div>
+
+                <h4 className="text-base font-extrabold text-white">{ms.title}</h4>
+                <p className="text-xs text-slate-400">{ms.description}</p>
+
+                <div className="pt-2 text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  Target: {new Date(ms.targetDate).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 👥 TAB 4: TEAM DIRECTORY */}
+      {activeTab === "team" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-400" />
+              Company Team Directory
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {teamMembers.map((m) => (
+              <div key={m.id} className="goperch-card p-5 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-black text-blue-400 text-lg">
+                  {m.name.charAt(0)}
+                </div>
+
+                <div className="space-y-1">
+                  <div className="font-extrabold text-sm text-white flex items-center gap-2">
+                    {m.name}
+                    {m.role === "CEO" && (
+                      <span className="text-[10px] font-black bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30">
+                        CEO
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-400 font-medium">{m.title || m.role}</div>
+                  <div className="text-[11px] text-blue-400 font-mono">{m.email}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 🎓 TAB 5: SKILLS MATRIX */}
+      {activeTab === "skills" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-blue-400" />
+              Employee Skills & Development Matrix
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {skills.map((sk) => (
+              <div key={sk.id} className="goperch-card p-5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                    {sk.category}
+                  </span>
+                  <span className="text-xs font-bold text-blue-400">{sk.proficiency || "ACTIVE"}</span>
+                </div>
+                <h4 className="text-base font-extrabold text-white">{sk.name}</h4>
+                {sk.notes && <p className="text-xs text-slate-400">{sk.notes}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ❓ TAB 6: HURDLES Q&A */}
+      {activeTab === "hurdles" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-blue-400" />
+              Team Hurdles & Technical Blockers
+            </h3>
+          </div>
+
+          <div className="space-y-3">
+            {hurdles.map((h) => (
+              <div key={h.id} className="goperch-card p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`text-xs font-extrabold px-2.5 py-1 rounded-full ${
+                      h.status === "RESOLVED"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                    }`}
+                  >
+                    {h.status}
+                  </span>
+                  <span className="text-xs text-slate-400 font-medium">Asked by {h.askedBy.name}</span>
+                </div>
+
+                <h4 className="text-base font-extrabold text-white">{h.title}</h4>
+                <p className="text-xs text-slate-300 bg-slate-900 p-3 rounded-xl border border-slate-800">
+                  Q: {h.question}
+                </p>
+
+                {h.answer && (
+                  <div className="p-3 bg-blue-950/30 border border-blue-500/30 rounded-xl text-xs text-blue-200">
+                    <span className="font-extrabold text-blue-400">Resolution: </span>
+                    {h.answer}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 💬 TAB 7: TEAM CHAT */}
       {activeTab === "chat" && (
-        <div className="goperch-card grid grid-cols-1 md:grid-cols-4 min-h-[500px] overflow-hidden">
-          <div className="bg-slate-50/60 border-r border-slate-100 p-4 space-y-4">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
-              <span>Channels</span>
-              <button onClick={() => setIsChannelModalOpen(true)} className="text-blue-600 hover:underline">+</button>
-            </div>
-            <div className="space-y-1">
-              {channels
-                .filter((ch) => {
-                  if (user.role === "EMPLOYEE") {
-                    return !ch.department || ch.department?.name?.toLowerCase() === user.department?.name?.toLowerCase() || ch.name.toLowerCase() === "general";
-                  }
-                  return true;
-                })
-                .map((ch) => (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[550px]">
+          {/* Channel Sidebar */}
+          <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-4 space-y-3 overflow-y-auto">
+            <div className="text-xs font-black text-slate-400 uppercase tracking-wider">Chat Channels</div>
+            <div className="space-y-1 text-xs font-extrabold">
+              {channels.map((ch) => (
                 <button
                   key={ch.id}
-                  onClick={() => { setSelectedChannelId(ch.id); setSelectedDmUser(null); }}
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition ${selectedChannelId === ch.id ? "bg-blue-600 text-white" : "text-slate-700 hover:bg-slate-100"}`}
+                  onClick={() => setActiveChannelId(ch.id)}
+                  className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${
+                    activeChannelId === ch.id
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
                 >
-                  # {ch.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider pt-3 border-t border-slate-200/60">Direct Messages</div>
-            <div className="space-y-1">
-              {allUsersList.filter(u => u.id !== user.id).map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => { setSelectedDmUser(u as any); setSelectedChannelId(null); }}
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition ${selectedDmUser?.id === u.id ? "bg-blue-600 text-white font-bold" : "text-slate-700 hover:bg-slate-100"}`}
-                >
-                  💬 {u.name}
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  #{ch.name}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="md:col-span-3 flex flex-col justify-between bg-white p-4">
-            <div className="pb-3 border-b border-slate-100 text-xs font-bold text-slate-900">
-              {selectedChannelId ? `# ${channels.find(c => c.id === selectedChannelId)?.name}` : selectedDmUser ? `Chat with ${selectedDmUser.name}` : "Select chat"}
+          {/* Chat Messages Panel */}
+          <div className="md:col-span-3 bg-[#0f172a] border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+            <div className="overflow-y-auto space-y-3 pr-2 flex-1">
+              {chatMessages.length === 0 ? (
+                <div className="text-slate-500 text-center py-20 text-xs">No messages yet in this channel</div>
+              ) : (
+                chatMessages.map((msg) => (
+                  <div key={msg.id} className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-extrabold text-blue-400">{msg.sender.name}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-200">{msg.content}</p>
+                  </div>
+                ))
+              )}
             </div>
 
-            <div className="space-y-3 overflow-y-auto max-h-[360px] py-4">
-              {chatMessages.map((msg) => (
-                <div key={msg.id} className="text-xs space-y-0.5">
-                  <span className="font-bold text-slate-900">{msg.sender.name}: </span>
-                  <span className="text-slate-700">{msg.content}</span>
-                </div>
-              ))}
-            </div>
-
-            <form onSubmit={handleSendMessage} className="pt-3 border-t border-slate-100 flex gap-2">
+            <form onSubmit={handleSendMessage} className="mt-3 flex items-center gap-2">
               <input
                 type="text"
                 placeholder="Type a message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                value={newMessageContent}
+                onChange={(e) => setNewMessageContent(e.target.value)}
+                className="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
               />
-              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700">Send</button>
+              <button
+                type="submit"
+                className="p-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-lg shadow-blue-500/20"
+              >
+                <Send className="w-4 h-4" />
+              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* TAB 4: DIRECTORY & EMPLOYEE ROSTER MANAGEMENT */}
-      {activeTab === "directory" && (
-        <div className="space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Team Directory & Employee Roster</h2>
-              <p className="text-xs text-slate-500">
-                {showArchivedRoster ? "Viewing Soft-Deleted / Backup Roster. Restore employees anytime to undo mistakes." : "Active team members across all departments."}
+      {/* 🔍 TICKET DETAIL DRAWER / MODAL WITH COMMENTS */}
+      {selectedTaskTicket && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-slate-800 rounded-3xl max-w-2xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                    {selectedTaskTicket.department.name}
+                  </span>
+                  <span className="font-extrabold bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
+                    {selectedTaskTicket.priority} PRIORITY
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-white">{selectedTaskTicket.title}</h3>
+              </div>
+
+              <button
+                onClick={() => setSelectedTaskTicket(null)}
+                className="p-1 text-slate-400 hover:text-white bg-slate-800 rounded-xl"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Ticket Metadata */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-slate-900 p-4 rounded-2xl border border-slate-800">
+              <div>
+                <span className="text-slate-500 font-bold block">ASSIGNED EMPLOYEE</span>
+                <span className="text-white font-extrabold flex items-center gap-1 mt-0.5">
+                  <UserCheck className="w-3.5 h-3.5 text-blue-400" />
+                  {selectedTaskTicket.assignedTo?.name || "Unassigned"}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-slate-500 font-bold block">TASK CREATOR / MANAGER</span>
+                <span className="text-white font-extrabold flex items-center gap-1 mt-0.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                  {selectedTaskTicket.createdBy.name}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-slate-500 font-bold block">DUE DATE</span>
+                <span className="text-white font-extrabold flex items-center gap-1 mt-0.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  {selectedTaskTicket.dueDate
+                    ? new Date(selectedTaskTicket.dueDate).toLocaleDateString()
+                    : "No Deadline"}
+                </span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <div className="text-xs font-black text-slate-400 uppercase tracking-wider">Ticket Description</div>
+              <p className="text-xs text-slate-200 bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80 leading-relaxed">
+                {selectedTaskTicket.description || "No additional description provided for this task ticket."}
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowArchivedRoster(!showArchivedRoster)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition ${
-                  showArchivedRoster ? "bg-amber-100 text-amber-900 border-amber-300" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                }`}
-              >
-                {showArchivedRoster ? "← Active Directory" : `📦 Backup Roster (${archivedEmployees.length})`}
-              </button>
-
-              {user.role !== "EMPLOYEE" && (
-                <button
-                  onClick={() => setIsAddEmployeeModalOpen(true)}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-                >
-                  + Add Employee
-                </button>
-              )}
-            </div>
-          </div>
-
-          {!showArchivedRoster ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {allUsersList
-                .filter((emp) => {
-                  if (user.role === "EMPLOYEE") {
-                    const empDept = departments.find((d) => d.users.some((u) => u.id === emp.id));
-                    return empDept?.id === user.departmentId || empDept?.name.toLowerCase() === user.department?.name?.toLowerCase();
-                  }
-                  return true;
-                })
-                .map((emp) => (
-                <div
-                  key={emp.id}
-                  className="goperch-card p-4 hover:border-blue-500 transition flex items-center justify-between"
-                >
-                  <div
-                    onClick={() => openEmployeeProfile(emp.id)}
-                    className="cursor-pointer flex-1 space-y-0.5"
+            {/* Status Movement Quick Selector */}
+            <div className="space-y-2">
+              <div className="text-xs font-black text-slate-400 uppercase tracking-wider">
+                Shift Ticket Status (Notifies Manager)
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                {(["TODO", "IN_PROGRESS", "IN_REVIEW", "COMPLETED"] as const).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => handleUpdateTaskStatus(selectedTaskTicket.id, st)}
+                    className={`p-2.5 font-extrabold rounded-xl transition border text-center ${
+                      selectedTaskTicket.status === st
+                        ? "bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-500/20"
+                        : "bg-slate-900 text-slate-400 hover:text-white border-slate-800"
+                    }`}
                   >
-                    <div className="font-bold text-slate-900 text-sm">{emp.name}</div>
-                    <div className="text-xs text-slate-500">{emp.title || emp.role} &bull; {emp.email}</div>
-                  </div>
+                    {st === "TODO"
+                      ? "📋 To Do"
+                      : st === "IN_PROGRESS"
+                      ? "⚡ In Progress"
+                      : st === "IN_REVIEW"
+                      ? "⚠️ In Review"
+                      : "✅ Completed"}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                  <div className="flex items-center gap-2">
-                    {user.role !== "EMPLOYEE" && emp.id !== user.id && (
-                      CORE_TEAM_EMAILS.includes(emp.email.toLowerCase()) ? (
-                        <span className="px-2.5 py-1 text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 rounded-lg flex items-center gap-1" title="Core Leadership Member (Protected)">
-                          🛡️ Core Leader
+            {/* Ticket Discussion / Comments Section */}
+            <div className="space-y-3 border-t border-slate-800 pt-4">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-black text-white flex items-center gap-1.5">
+                  <MessageSquare className="w-4 h-4 text-blue-400" />
+                  Ticket Comments & Activity Log ({selectedTaskTicket.comments?.length || 0})
+                </div>
+              </div>
+
+              {/* Comments Thread */}
+              <div className="max-h-48 overflow-y-auto space-y-2 text-xs pr-1">
+                {(!selectedTaskTicket.comments || selectedTaskTicket.comments.length === 0) ? (
+                  <div className="text-slate-500 italic text-center py-4">No comments on this ticket yet.</div>
+                ) : (
+                  selectedTaskTicket.comments.map((c) => (
+                    <div key={c.id} className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1">
+                      <div className="flex items-center justify-between text-slate-400">
+                        <span className="font-extrabold text-blue-400">{c.author.name}</span>
+                        <span className="text-[10px] font-mono">
+                          {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteEmployee(emp.id);
-                          }}
-                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition"
-                          title="Delete / Archive Employee with Backup Protection"
-                        >
-                          🗑️
-                        </button>
-                      )
-                    )}
-                    <button onClick={() => openEmployeeProfile(emp.id)} className="text-xs text-blue-600 font-bold">&rarr;</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {archivedEmployees.length === 0 ? (
-                <div className="goperch-card p-6 text-center text-xs text-slate-400 italic">
-                  No archived employees in backup roster.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {archivedEmployees.map((emp) => (
-                    <div key={emp.id} className="goperch-card p-4 bg-slate-50 border-amber-200/80 flex items-center justify-between">
-                      <div>
-                        <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                          <span>{emp.name}</span>
-                          <span className="px-2 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-800 rounded-full">Archived in Backup</span>
-                        </div>
-                        <div className="text-xs text-slate-400">{emp.title || emp.role} &bull; {emp.email}</div>
                       </div>
-
-                      <button
-                        onClick={() => handleRestoreEmployee(emp.id)}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition"
-                      >
-                        ↺ Restore Employee
-                      </button>
+                      <p className="text-slate-200">{c.content}</p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 5: TASK BOARD (INTERACTIVE DRAG & DROP KANBAN COLUMNS) */}
-      {activeTab === "tasks" && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {(["TODO", "IN_PROGRESS", "IN_REVIEW", "COMPLETED"] as const).map((statusCol) => (
-            <div
-              key={statusCol}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                const taskId = e.dataTransfer.getData("taskId");
-                if (taskId) handleUpdateTaskStatus(taskId, statusCol);
-              }}
-              className="bg-slate-50/80 p-3.5 rounded-2xl border-2 border-dashed border-slate-200/80 hover:border-blue-400/60 transition-all space-y-3 min-h-[400px]"
-            >
-              <div className="flex justify-between items-center border-b border-slate-200/60 pb-2">
-                <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                  {statusCol.replace("_", " ")}
-                </span>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white text-slate-600 border border-slate-200 shadow-sm">
-                  {filteredTasks.filter((t) => t.status === statusCol).length}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {filteredTasks.filter((t) => t.status === statusCol).map((t) => renderTaskCard(t))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* TAB 6: SKILLS */}
-      {activeTab === "skills" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {userSkills.map((us) => (
-            <div key={us.id} className="goperch-card p-4 space-y-1 text-xs">
-              <div className="font-bold text-slate-900">{us.skill.name}</div>
-              <div className="text-blue-600 font-semibold">{us.user.name} &bull; {us.proficiency}</div>
-              {us.notes && <div className="text-slate-400 italic">"{us.notes}"</div>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* TAB 7: HURDLES */}
-      {activeTab === "hurdles" && (
-        <div className="space-y-2">
-          {hurdles.map((h) => (
-            <div key={h.id} className="goperch-card p-4 space-y-2 text-xs">
-              <div className="flex justify-between items-start">
-                <span className="font-bold text-slate-900">{h.title}</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${h.status === "OPEN" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{h.status}</span>
-              </div>
-              <p className="text-slate-600">{h.question}</p>
-              {h.answer && <div className="p-2 bg-slate-50 rounded-lg text-emerald-700 font-medium">Resolution: {h.answer}</div>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* EMPLOYEE PROFILE MODAL */}
-      {selectedEmployeeId && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            {employeeProfile && (
-              <>
-                <div className="flex justify-between items-start border-b border-slate-100 pb-3">
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-900">{employeeProfile.name}</h3>
-                    <div className="text-xs text-slate-400">{employeeProfile.title || employeeProfile.role} &bull; {employeeProfile.email}</div>
-                  </div>
-                  <button onClick={() => setSelectedEmployeeId(null)} className="text-slate-400 hover:text-slate-900 text-sm font-bold">✕</button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                  <div className="bg-slate-50 p-3 rounded-xl">
-                    <div className="text-lg font-bold text-blue-600">{employeeProfile.metrics.completionRate}%</div>
-                    <div className="text-slate-400">Completion Rate</div>
-                  </div>
-                  <div className="bg-slate-50 p-3 rounded-xl">
-                    <div className="text-lg font-bold text-slate-900">{employeeProfile.skills.length}</div>
-                    <div className="text-slate-400">Logged Skills</div>
-                  </div>
-                </div>
-
-                {user.role !== "EMPLOYEE" && (
-                  <div className="pt-2 space-y-2">
-                    <button
-                      onClick={() => {
-                        setNewTask((prev) => ({ ...prev, assignedToId: employeeProfile.id, departmentId: employeeProfile.department?.name ? departments.find(d => d.name === employeeProfile.department?.name)?.id || "" : user.departmentId || "" }));
-                        setIsTaskModalOpen(true);
-                      }}
-                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow-sm transition"
-                    >
-                      + Assign Direct Task to {employeeProfile.name.split(" ")[0]}
-                    </button>
-
-                    {employeeProfile.id !== user.id && (
-                      CORE_TEAM_EMAILS.includes(employeeProfile.email.toLowerCase()) ? (
-                        <div className="w-full py-2 bg-blue-50 text-blue-800 font-bold rounded-xl text-xs border border-blue-200 text-center flex items-center justify-center gap-1.5">
-                          🛡️ Core Leadership Member (Undeletable Account)
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleDeleteEmployee(employeeProfile.id)}
-                          className="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl text-xs border border-rose-200 transition"
-                        >
-                          🗑️ Delete / Archive Employee to Backup Roster
-                        </button>
-                      )
-                    )}
-                  </div>
+                  ))
                 )}
+              </div>
 
-                <div className="flex justify-end pt-2">
-                  <button onClick={() => setSelectedEmployeeId(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold">Close</button>
-                </div>
-              </>
-            )}
+              {/* Comment Input */}
+              <form onSubmit={handleAddComment} className="flex items-center gap-2 pt-2">
+                <input
+                  type="text"
+                  placeholder="Write a comment / update for manager..."
+                  value={newCommentInput}
+                  onChange={(e) => setNewCommentInput(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isSubmittingComment || !newCommentInput.trim()}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl transition shadow-lg shadow-blue-500/20 disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  Post Comment
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ADD EMPLOYEE MODAL */}
-      {isAddEmployeeModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <form onSubmit={handleAddEmployee} className="bg-white p-6 rounded-3xl border border-slate-200 max-w-md w-full space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Add New Employee</h3>
-                <p className="text-xs text-slate-400">Create employee account with backup safety.</p>
-              </div>
-              <button type="button" onClick={() => setIsAddEmployeeModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-sm font-bold">✕</button>
-            </div>
-
-            <input
-              type="text"
-              required
-              placeholder="Full Name *"
-              value={newEmployee.name}
-              onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
-            />
-
-            <input
-              type="email"
-              required
-              placeholder="Email Address *"
-              value={newEmployee.email}
-              onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
-            />
-
-            <input
-              type="text"
-              placeholder="Job Title (e.g. Senior Firmware Specialist)"
-              value={newEmployee.title}
-              onChange={(e) => setNewEmployee({ ...newEmployee, title: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
-            />
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">Role</label>
-                <select
-                  value={newEmployee.role}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
-                >
-                  <option value="EMPLOYEE">EMPLOYEE</option>
-                  {user.role === "CEO" && <option value="HOD">HOD (Head of Dept)</option>}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">Department</label>
-                <select
-                  value={newEmployee.departmentId}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, departmentId: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
-                >
-                  <option value="">Select Department...</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
+      {/* ➕ CREATE TICKET MODAL */}
+      {showCreateTaskModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <form
+            onSubmit={handleCreateTask}
+            className="bg-[#0f172a] border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <Plus className="w-5 h-5 text-blue-400" />
+                Assign New Task Ticket
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowCreateTaskModal(false)}
+                className="p-1 text-slate-400 hover:text-white bg-slate-800 rounded-xl"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-600 mb-1">Initial Password</label>
+              <label className="block text-xs font-extrabold text-slate-300 mb-1">Ticket Title</label>
               <input
                 type="text"
-                value={newEmployee.password}
-                onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-blue-600"
+                required
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                placeholder="e.g. Optimize Database Query Telemetry"
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
               />
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <button type="submit" className="flex-1 bg-emerald-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition shadow-sm">
-                Add Employee Account
-              </button>
-              <button type="button" onClick={() => setIsAddEmployeeModalOpen(false)} className="bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl text-xs font-semibold hover:bg-slate-200 transition">
-                Cancel
-              </button>
+            <div>
+              <label className="block text-xs font-extrabold text-slate-300 mb-1">Description</label>
+              <textarea
+                rows={3}
+                value={newTaskDesc}
+                onChange={(e) => setNewTaskDesc(e.target.value)}
+                placeholder="Detailed instructions for the assigned employee..."
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+              />
             </div>
-          </form>
-        </div>
-      )}
 
-      {/* CREATE PROJECT MODAL */}
-      {isProjectModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <form onSubmit={handleCreateProject} className="bg-white p-6 rounded-3xl border border-slate-200 max-w-md w-full space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-900">Create New Project</h3>
-            <input
-              type="text"
-              required
-              placeholder="Project Title"
-              value={newProject.title}
-              onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900"
-            />
-            <textarea
-              placeholder="Project Description"
-              value={newProject.description}
-              onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 h-20"
-            />
-            <select
-              value={newProject.departmentId}
-              onChange={(e) => setNewProject({ ...newProject, departmentId: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900"
-            >
-              <option value="">Company-wide (All Departments)</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name} Department</option>
-              ))}
-            </select>
-            {user.role === "CEO" && (
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={newProject.isTopFocus}
-                  onChange={(e) => setNewProject({ ...newProject, isTopFocus: e.target.checked })}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                Mark as CEO Top 3 Strategic Focus Priority
-              </label>
-            )}
-            <div className="flex gap-2">
-              <button type="submit" className="flex-1 bg-slate-900 text-white py-2 rounded-xl text-xs font-semibold hover:bg-slate-800">Create Project</button>
-              <button type="button" onClick={() => setIsProjectModalOpen(false)} className="bg-slate-100 text-slate-700 py-2 px-4 rounded-xl text-xs">Cancel</button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* CREATE TASK MODAL */}
-      {isTaskModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <form onSubmit={handleCreateTask} className="bg-white p-6 rounded-3xl border border-slate-200 max-w-md w-full space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Assign New Task</h3>
-                <p className="text-xs text-slate-400">Assign task across any department or project.</p>
+                <label className="block font-extrabold text-slate-300 mb-1">Priority</label>
+                <select
+                  value={newTaskPriority}
+                  onChange={(e) => setNewTaskPriority(e.target.value as any)}
+                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="LOW">LOW</option>
+                  <option value="MEDIUM">MEDIUM</option>
+                  <option value="HIGH">HIGH</option>
+                  <option value="URGENT">URGENT</option>
+                </select>
               </div>
-              <button type="button" onClick={() => setIsTaskModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-sm font-bold">✕</button>
+
+              <div>
+                <label className="block font-extrabold text-slate-300 mb-1">Due Date</label>
+                <input
+                  type="date"
+                  value={newTaskDueDate}
+                  onChange={(e) => setNewTaskDueDate(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
             </div>
 
-            <input
-              type="text"
-              required
-              placeholder="Task Title *"
-              value={newTask.title}
-              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
-            />
+            <div>
+              <label className="block text-xs font-extrabold text-slate-300 mb-1">Assign to Employee</label>
+              <select
+                value={newTaskAssigneeId}
+                onChange={(e) => setNewTaskAssigneeId(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white"
+              >
+                <option value="">Unassigned (Open for Pick Up)</option>
+                {teamMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.department?.name || m.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl transition shadow-lg shadow-blue-500/20"
+            >
+              Assign Ticket to Kanban Board
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* 👑 CEO CREATE PRIORITY MODAL */}
+      {showCreatePriorityModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <form
+            onSubmit={handleCreatePriorityCard}
+            className="bg-[#0f172a] border border-purple-500/40 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <Crown className="w-5 h-5 text-purple-400" />
+                Set CEO Strategic Priority Card
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowCreatePriorityModal(false)}
+                className="p-1 text-slate-400 hover:text-white bg-slate-800 rounded-xl"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-600 mb-1">Target Department *</label>
-              <select
+              <label className="block text-xs font-extrabold text-slate-300 mb-1">Priority Title</label>
+              <input
+                type="text"
                 required
-                value={newTask.departmentId}
-                onChange={(e) => setNewTask({ ...newTask, departmentId: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-blue-600"
+                value={newPriorityTitle}
+                onChange={(e) => setNewPriorityTitle(e.target.value)}
+                placeholder="e.g. Next-Gen Telemetry Hardware Scale"
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-extrabold text-slate-300 mb-1">Description</label>
+              <textarea
+                rows={3}
+                value={newPriorityDesc}
+                onChange={(e) => setNewPriorityDesc(e.target.value)}
+                placeholder="Executive directive for the leadership team..."
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-extrabold text-slate-300 mb-1">Target Department</label>
+              <select
+                value={newPriorityDept}
+                onChange={(e) => setNewPriorityDept(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white"
               >
-                <option value="">Select Department...</option>
+                <option value="">Cross-Departmental</option>
                 {departments.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name} Department</option>
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
                 ))}
               </select>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 mb-1">Associated Project (Optional)</label>
-              <select
-                value={newTask.projectId}
-                onChange={(e) => setNewTask({ ...newTask, projectId: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
-              >
-                <option value="">None (Standalone Department Task)</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.title} ({p.department?.name || "Company-wide"})</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 mb-1">Assignee (Optional)</label>
-              <select
-                value={newTask.assignedToId}
-                onChange={(e) => {
-                  const selectedUser = allUsersList.find((u) => u.id === e.target.value);
-                  setNewTask({
-                    ...newTask,
-                    assignedToId: e.target.value,
-                    departmentId: selectedUser?.departmentId || newTask.departmentId,
-                  });
-                }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
-              >
-                <option value="">Unassigned (Open Pool)</option>
-                {allUsersList.map((u) => {
-                  const deptName = departments.find((d) => d.id === u.departmentId)?.name || "Leadership";
-                  return (
-                    <option key={u.id} value={u.id}>
-                      {u.name} — {u.title || u.role} ({deptName})
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button type="submit" className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition shadow-sm">
-                Create & Assign Task
-              </button>
-              <button type="button" onClick={() => setIsTaskModalOpen(false)} className="bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl text-xs font-semibold hover:bg-slate-200 transition">
-                Cancel
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl transition shadow-lg shadow-purple-500/20"
+            >
+              Publish CEO Priority Card
+            </button>
           </form>
         </div>
       )}

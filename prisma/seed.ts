@@ -151,6 +151,8 @@ async function main() {
   console.log("✅ Core Leadership Team seeded: Ryan Bantu (CEO), Prasanna (Software HOD), Vikram (Electronics HOD), Jonathan Jaladi (Sales HOD)");
 
   // 3. Clear existing projects/tasks to re-seed cleanly
+  await prisma.taskComment.deleteMany({});
+  await prisma.notification.deleteMany({});
   await prisma.projectNote.deleteMany({});
   await prisma.hurdle.deleteMany({});
   await prisma.task.deleteMany({});
@@ -388,85 +390,158 @@ async function main() {
     },
   });
 
-  // 8. Create Tasks
-  await prisma.task.createMany({
+  // 8. Create Tasks & Kanban Tickets
+  const t1 = await prisma.task.create({
+    data: {
+      title: "CEO Direct Task: Oversee Software Security Audit",
+      description: "Task assigned directly by CEO Ryan Bantu to Software HOD Prasanna.",
+      status: "IN_PROGRESS",
+      priority: "HIGH",
+      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      departmentId: deptSoftware.id,
+      createdById: ceo.id,
+      assignedToId: hodSoftware.id,
+      milestoneId: m1.id,
+      projectId: projAiPlatform.id,
+    },
+  });
+
+  const t2 = await prisma.task.create({
+    data: {
+      title: "HOD Cross-Delegation: Hardware Power Spec Sync",
+      description: "Task delegated from Software HOD Prasanna to Electronics HOD Vikram.",
+      status: "IN_REVIEW",
+      priority: "URGENT",
+      dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      departmentId: deptElectronics.id,
+      createdById: hodSoftware.id,
+      assignedToId: hodElectronics.id,
+      milestoneId: m2.id,
+      projectId: projIotHardware.id,
+    },
+  });
+
+  const t3 = await prisma.task.create({
+    data: {
+      title: "Sales & Software Joint Demo Setup",
+      description: "Task assigned by Sales HOD Jonathan Jaladi to Software HOD Prasanna.",
+      status: "TODO",
+      priority: "HIGH",
+      dueDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+      departmentId: deptSoftware.id,
+      createdById: hodSales.id,
+      assignedToId: hodSoftware.id,
+      milestoneId: m1.id,
+      projectId: projGlobalSales.id,
+    },
+  });
+
+  const t4 = await prisma.task.create({
+    data: {
+      title: "Implement Role-Based Access Control (RBAC)",
+      description: "Enforce CEO, HOD, and Employee permission checks across API endpoints.",
+      status: "IN_PROGRESS",
+      priority: "HIGH",
+      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      departmentId: deptSoftware.id,
+      createdById: hodSoftware.id,
+      assignedToId: empSoftware.id,
+      milestoneId: m1.id,
+      projectId: projInternalHrms.id,
+    },
+  });
+
+  const t5 = await prisma.task.create({
+    data: {
+      title: "Smart Controller Micro-Code Verification",
+      description: "Priya Patel to verify hardware interrupt routine for real-time telemetry.",
+      status: "IN_PROGRESS",
+      priority: "MEDIUM",
+      dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      departmentId: deptElectronics.id,
+      createdById: hodElectronics.id,
+      assignedToId: empElectronics.id,
+      milestoneId: m2.id,
+      projectId: projIotHardware.id,
+    },
+  });
+
+  const t6 = await prisma.task.create({
+    data: {
+      title: "EMEA Pitch Deck & Pricing Review",
+      description: "James Wilson to prepare customized pricing proposals for enterprise prospects.",
+      status: "COMPLETED",
+      priority: "HIGH",
+      dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      departmentId: deptSales.id,
+      createdById: hodSales.id,
+      assignedToId: empSales.id,
+      milestoneId: m3.id,
+      projectId: projGlobalSales.id,
+    },
+  });
+
+  console.log("✅ Sample Tasks created for Ryan Bantu, Prasanna, Vikram, Jonathan Jaladi, Alex, Priya, and James");
+
+  // Seed Task Comments
+  await prisma.taskComment.createMany({
     data: [
       {
-        title: "CEO Direct Task: Oversee Software Security Audit",
-        description: "Task assigned directly by CEO Ryan Bantu to Software HOD Prasanna.",
-        status: "IN_PROGRESS",
-        priority: "HIGH",
-        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        departmentId: deptSoftware.id,
-        createdById: ceo.id,
-        assignedToId: hodSoftware.id,
-        milestoneId: m1.id,
-        projectId: projAiPlatform.id,
+        content: "I have initialized the security audit sweep. OWASP compliance checks are 60% completed.",
+        taskId: t1.id,
+        authorId: hodSoftware.id,
       },
       {
-        title: "HOD Cross-Delegation: Hardware Power Spec Sync",
-        description: "Task delegated from Software HOD Prasanna to Electronics HOD Vikram.",
-        status: "IN_PROGRESS",
-        priority: "URGENT",
-        dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-        departmentId: deptElectronics.id,
-        createdById: hodSoftware.id,
-        assignedToId: hodElectronics.id,
-        milestoneId: m2.id,
-        projectId: projIotHardware.id,
+        content: "Excellent progress Prasanna. Make sure the API rate-limiting endpoints are verified.",
+        taskId: t1.id,
+        authorId: ceo.id,
       },
       {
-        title: "Sales & Software Joint Demo Setup",
-        description: "Task assigned by Sales HOD Jonathan Jaladi to Software HOD Prasanna.",
-        status: "IN_PROGRESS",
-        priority: "HIGH",
-        dueDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
-        departmentId: deptSoftware.id,
-        createdById: hodSales.id,
-        assignedToId: hodSoftware.id,
-        milestoneId: m1.id,
-        projectId: projGlobalSales.id,
+        content: "Priya and I completed the voltage transient simulation. Moved to IN_REVIEW for final sign-off.",
+        taskId: t2.id,
+        authorId: hodElectronics.id,
       },
       {
-        title: "Implement Role-Based Access Control (RBAC)",
-        description: "Enforce CEO, HOD, and Employee permission checks across API endpoints.",
-        status: "IN_PROGRESS",
-        priority: "HIGH",
-        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        departmentId: deptSoftware.id,
-        createdById: hodSoftware.id,
-        assignedToId: empSoftware.id,
-        milestoneId: m1.id,
-        projectId: projInternalHrms.id,
+        content: "Alex Dev: JWT middleware and route guards are deployed to staging.",
+        taskId: t4.id,
+        authorId: empSoftware.id,
       },
       {
-        title: "Smart Controller Micro-Code Verification",
-        description: "Priya Patel to verify hardware interrupt routine for real-time telemetry.",
-        status: "IN_PROGRESS",
-        priority: "MEDIUM",
-        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-        departmentId: deptElectronics.id,
-        createdById: hodElectronics.id,
-        assignedToId: empElectronics.id,
-        milestoneId: m2.id,
-        projectId: projIotHardware.id,
-      },
-      {
-        title: "EMEA Pitch Deck & Pricing Review",
-        description: "James Wilson to prepare customized pricing proposals for enterprise prospects.",
-        status: "COMPLETED",
-        priority: "HIGH",
-        dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        departmentId: deptSales.id,
-        createdById: hodSales.id,
-        assignedToId: empSales.id,
-        milestoneId: m3.id,
-        projectId: projGlobalSales.id,
+        content: "Pricing slides and ROI model submitted to Jonathan Jaladi. Deal ready for closing.",
+        taskId: t6.id,
+        authorId: empSales.id,
       },
     ],
   });
 
-  console.log("✅ Sample Tasks created for Ryan Bantu, Prasanna, Vikram, Jonathan Jaladi, Alex, Priya, and James");
+  // Seed Manager Notifications
+  await prisma.notification.createMany({
+    data: [
+      {
+        userId: ceo.id,
+        title: "Task Status Updated",
+        message: "Prasanna moved 'CEO Direct Task: Oversee Software Security Audit' to IN_PROGRESS.",
+        isRead: false,
+        link: "#tasks",
+      },
+      {
+        userId: hodSoftware.id,
+        title: "New Ticket Comment",
+        message: "Alex Dev commented on 'Implement Role-Based Access Control (RBAC)': JWT middleware deployed.",
+        isRead: false,
+        link: "#tasks",
+      },
+      {
+        userId: hodSales.id,
+        title: "Ticket Completed",
+        message: "James Wilson marked 'EMEA Pitch Deck & Pricing Review' as COMPLETED.",
+        isRead: true,
+        link: "#tasks",
+      },
+    ],
+  });
+
+  console.log("✅ Task Comments & Manager Notifications seeded");
 
   // 9. Create Skills & UserSkills
   const s1 = await prisma.skill.upsert({

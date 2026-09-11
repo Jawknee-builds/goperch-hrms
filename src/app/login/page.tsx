@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Building2, Sparkles, Mail, Lock, LogIn, ShieldCheck, UserCheck } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,69 +51,77 @@ export default function LoginPage() {
   ];
 
   return (
-    <div className="min-h-screen goperch-grid-bg text-slate-900 flex items-center justify-center p-4 font-sans">
+    <div className="min-h-screen goperch-grid-bg text-slate-100 flex items-center justify-center p-4 font-sans">
       <div className="max-w-md w-full space-y-6">
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 text-xs font-semibold rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
             Enterprise HRMS Platform
           </div>
 
           <div className="flex items-center justify-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-blue-500/30">
-              G
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-blue-500/30">
+              <Building2 className="w-6 h-6 text-white" />
             </div>
-            <span className="font-extrabold text-2xl text-slate-900 tracking-tight">GoPerch</span>
+            <span className="font-extrabold text-2xl text-white tracking-tight">GoPerch</span>
           </div>
 
-          <h1 className="text-3xl font-black tracking-tight text-slate-900">
+          <h1 className="text-3xl font-black tracking-tight text-white">
             One platform. <span className="goperch-gradient-text">Every department.</span>
           </h1>
-          <p className="text-sm text-slate-600 max-w-xs mx-auto">
-            Sign in to access tasks, milestones, employee learning, and team hurdles.
+          <p className="text-sm text-slate-400 max-w-xs mx-auto">
+            Sign in to access interactive Kanban tickets, milestones, employee learning, and team hurdles.
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-2xl text-sm shadow-sm font-medium">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-300 p-3.5 rounded-2xl text-sm font-medium">
             {error}
           </div>
         )}
 
-        <form onSubmit={(e) => handleLogin(e)} className="bg-white p-6 rounded-3xl border border-slate-300 space-y-4 shadow-xl shadow-slate-300/40">
+        <form onSubmit={(e) => handleLogin(e)} className="bg-[#0f172a] p-6 rounded-3xl border border-slate-800 space-y-4 shadow-2xl">
           <div>
-            <label className="block text-xs font-extrabold text-slate-800 mb-1">Email Address</label>
+            <label className="flex items-center gap-1.5 text-xs font-extrabold text-slate-300 mb-1">
+              <Mail className="w-3.5 h-3.5 text-blue-400" />
+              Email Address
+            </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition"
+              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-blue-500 transition"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-extrabold text-slate-800 mb-1">Password</label>
+            <label className="flex items-center gap-1.5 text-xs font-extrabold text-slate-300 mb-1">
+              <Lock className="w-3.5 h-3.5 text-blue-400" />
+              Password
+            </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white transition"
+              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-blue-500 transition"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-sm transition shadow-lg shadow-blue-500/25 disabled:opacity-50"
+            className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-sm transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
           >
+            <LogIn className="w-4 h-4" />
             {loading ? "Signing in..." : "Sign In to GoPerch HRMS"}
           </button>
         </form>
 
-        <div className="bg-white p-5 rounded-3xl border border-slate-300 space-y-3 shadow-md shadow-slate-300/30">
-          <div className="text-xs font-extrabold text-slate-700 uppercase tracking-wider text-center">
+        <div className="bg-[#0f172a] p-5 rounded-3xl border border-slate-800 space-y-3 shadow-xl">
+          <div className="text-xs font-extrabold text-slate-400 uppercase tracking-wider text-center flex items-center justify-center gap-1.5">
+            <UserCheck className="w-4 h-4 text-blue-400" />
             Quick 1-Click Demo Login Accounts
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -125,10 +134,10 @@ export default function LoginPage() {
                   setPassword("password123");
                   handleLogin(undefined, acc.email, "password123");
                 }}
-                className="p-2.5 text-left bg-slate-50 hover:bg-blue-50 border border-slate-300 hover:border-blue-400 rounded-xl transition group"
+                className="p-2.5 text-left bg-slate-900/60 hover:bg-blue-600/10 border border-slate-800 hover:border-blue-500/50 rounded-xl transition group"
               >
-                <div className="font-extrabold text-slate-900 group-hover:text-blue-700">{acc.label}</div>
-                <div className="text-[10px] text-slate-600 font-bold">{acc.dept} &bull; {acc.role}</div>
+                <div className="font-extrabold text-slate-200 group-hover:text-blue-400">{acc.label}</div>
+                <div className="text-[10px] text-slate-400 font-medium">{acc.dept} &bull; {acc.role}</div>
               </button>
             ))}
           </div>

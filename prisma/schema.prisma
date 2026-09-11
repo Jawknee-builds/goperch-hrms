@@ -48,6 +48,8 @@ model User {
   messagesReceived Message[]  @relation("ReceivedMessages")
   projectsCreated Project[]   @relation("CreatedProjects")
   projectNotes    ProjectNote[]
+  taskComments    TaskComment[]
+  notifications   Notification[]
 }
 
 model Milestone {
@@ -121,6 +123,7 @@ model Task {
   project      Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   hurdles      Hurdle[]
+  comments     TaskComment[]
 
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -202,4 +205,25 @@ model Message {
   recipient   User?     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: SetNull)
 
   createdAt   DateTime  @default(now())
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  content   String
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
 }
